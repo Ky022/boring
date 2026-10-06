@@ -22,3 +22,5 @@ writeFileSync("docs/index.html", html);
 console.log("Updated standalone GitHub Pages game.");
 
 copyFileSync("dist/online-config.json", "docs/online-config.json");
+
+writeFileSync("docs/.nojekyll", "");
