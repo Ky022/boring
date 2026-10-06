@@ -20,13 +20,15 @@ export function simulateCombat(
     const bonuses = formationBonuses(units);
     return units.map((u, i) => {
       const bonus = bonuses.find((b) => b.faction === u.faction)?.bonus || 0;
-      const maxHp = Math.round((u.power * hpScale + extra) * (1 + bonus));
+      const maxHp = Math.round(
+        (u.power * hpScale + extra) * (1 + bonus + (u.gearBonus?.hp || 0)),
+      );
       return {
         ...u,
         unitId: prefix + i,
         maxHp,
         hp: maxHp,
-        attackBonus: bonus,
+        attackBonus: bonus + (u.gearBonus?.attack || 0),
         shield: 0,
         burn: null,
         regen: 0,
@@ -52,7 +54,10 @@ export function simulateCombat(
       ...data,
     });
   const healing = (actor, target, amount, round, skill, revive = false) => {
-    const heal = Math.min(target.maxHp - target.hp, Math.round(amount));
+    const heal = Math.min(
+      target.maxHp - target.hp,
+      Math.round(amount * (1 + (actor.gearBonus?.heal || 0))),
+    );
     target.hp += heal;
     if (revive) {
       target.revived = true;
@@ -62,7 +67,10 @@ export function simulateCombat(
     emit(actor, target, round, skill, { heal, revive });
   };
   const shielding = (actor, target, amount, round, skill) => {
-    target.shield = Math.max(target.shield, Math.round(amount));
+    target.shield = Math.max(
+      target.shield,
+      Math.round(amount * (1 + (actor.gearBonus?.shield || 0))),
+    );
     emit(actor, target, round, skill, { shield: target.shield });
   };
   const damage = (actor, target, amount, round, skill, flags = {}) => {
@@ -80,7 +88,7 @@ export function simulateCombat(
       actor.element
     ];
     const elemental = favored && favored === target.element ? 1.25 : 1;
-    const critical = rng() < 0.15;
+    const critical = rng() < 0.15 + (actor.gearBonus?.crit || 0);
     const amount = Math.max(
       1,
       Math.round(

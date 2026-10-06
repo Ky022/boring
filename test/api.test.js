@@ -560,6 +560,64 @@ test("database accounts, cloud progress, guild cooperation, chat and arena", asy
       );
     },
   );
+  await t.test(
+    "new reward and equipment commands are atomic, deduplicated and persistent",
+    async () => {
+      const before = await call("/me", eve.token);
+      const cmd = {
+        requestId: crypto.randomUUID(),
+        revision: before.revision,
+        action: { type: "mailClaim", mail: "welcome-v1" },
+      };
+      const replies = await Promise.all([
+        call("/action", eve.token, cmd),
+        call("/action", eve.token, { ...cmd, requestId: crypto.randomUUID() }),
+      ]);
+      assert.equal(replies.filter((r) => r.status === 200).length, 1);
+      assert.equal(replies.filter((r) => r.status === 409).length, 1);
+      const winner = replies.find((r) => r.status === 200);
+      assert.equal(winner.state.gems, before.state.gems + 300);
+      const actual = await call("/me", eve.token);
+      assert.equal(actual.state.welfare.claimedMail.length, 1);
+      const act = async (action) => {
+        const p = await call("/me", eve.token);
+        return call("/action", eve.token, {
+          requestId: crypto.randomUUID(),
+          revision: p.revision,
+          action,
+        });
+      };
+      assert.equal(
+        (await act({ type: "mailClaim", mail: "welcome-v1" })).status,
+        400,
+      );
+      const item = await act({ type: "itemBuy", slot: "body" });
+      assert.equal(item.status, 200);
+      const uid = item.result.id;
+      assert.equal(
+        (await act({ type: "loadout", id: 8, slot: "body", item: uid })).status,
+        200,
+      );
+      assert.equal((await act({ type: "itemForge", item: uid })).status, 200);
+      const restored = await call("/login", null, {
+        username: "Eve",
+        password: "testpass789",
+      });
+      assert.equal(restored.state.items.find((i) => i.id === uid).level, 1);
+      assert.equal(restored.state.loadouts[8].body, uid);
+      assert.equal(
+        (await act({ type: "loadout", id: 9, slot: "body", item: uid })).status,
+        400,
+      );
+      assert.equal(
+        (await act({ type: "dungeon", dungeon: "gold", tier: 1, sweep: true }))
+          .status,
+        400,
+      );
+      assert.equal((await act({ type: "welfare", task: "free" })).status, 200);
+      assert.equal((await act({ type: "welfare", task: "free" })).status, 400);
+    },
+  );
   await t.test("logout revokes session", async () => {
     await call("/logout", eve.token, {});
     assert.equal((await call("/me", eve.token)).status, 401);

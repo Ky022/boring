@@ -14,6 +14,7 @@ import {
   heroes,
   power,
   simulateCombat,
+  combatTeam,
 } from "../src/game.js";
 class ApiError extends Error {
   constructor(message, status = 400) {
@@ -313,11 +314,8 @@ async function gameAction(db, user, input) {
     if (!defender.team.length) fail("对手没有已保存的队伍");
     state.arenaAttempts++;
     const combat = simulateCombat(
-      state.team.map((id) => ({ ...heroes[id], power: power(state, id) })),
-      defender.team.map((id) => ({
-        ...heroes[id],
-        power: power(defender, id),
-      })),
+      combatTeam(state),
+      combatTeam(defender),
       random,
       true,
     );

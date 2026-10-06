@@ -1,4 +1,10 @@
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  copyFileSync,
+  cpSync,
+} from "node:fs";
 let html = readFileSync("dist/index.html", "utf8");
 html = html.replace(
   /<script[^>]*src="([^"]+)"[^>]*><\/script>/g,
@@ -24,3 +30,5 @@ console.log("Updated standalone GitHub Pages game.");
 copyFileSync("dist/online-config.json", "docs/online-config.json");
 
 writeFileSync("docs/.nojekyll", "");
+
+cpSync("dist/art", "docs/art", { recursive: true });

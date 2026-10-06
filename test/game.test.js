@@ -43,6 +43,8 @@ test("first clear and replay rewards differ", () => {
   assert.ok(first.won);
   assert.equal(first.reward, 350);
   assert.equal(s.cleared, 1);
+  assert.equal(s.stage, 2);
+  applyAction(s, { type: "stage", stage: 1 });
   assert.equal(battle(s, () => 1).reward, 60);
 });
 test("lost battles do not advance or reward", () => {

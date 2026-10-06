@@ -1,3 +1,13 @@
+import {
+  expansionFresh,
+  expandSave,
+  expansionAction,
+  equipmentPower,
+  equipmentCombat,
+  validExpansion,
+  awardLoot,
+  heroGrowth,
+} from "./progression.js";
 import { simulateCombat, formationBonuses } from "./combat.js";
 export { simulateCombat, formationBonuses } from "./combat.js";
 export const rarities = {
@@ -76,7 +86,52 @@ export const heroes = [
   ],
   story: `${name}来自${["星灯镇", "熔火山脉", "暮影森林", "霜月海岸"][id % 4]}，为了守护失落的星灯，加入了冒险者小队。`,
 }));
+const biographies = [
+  "星灯圣域的成年祭司，以月光审判驱逐暗影，祝福受伤的同伴。",
+  "曾独自守住火山关隘的剑圣，灼烧剑锋是他的战斗标志。",
+  "暮影议会的成年追猎者，穿越敌方防线，用暗影箭恢复自身生命。",
+  "霜潮王庭的成年女王，以冰晶压制敌群，为队伍创造输出机会。",
+  "风暴军团的骑士长，越是受到攻击，雷霆反击越响亮。",
+  "研究古老星阵的成年学者，擅长用奥术击碎敌方护盾。",
+  "自由的成年风林旅人，用连续箭击追击敌方后排。",
+  "成年潮汐医师，将海潮化作持续恢复，守护队伍的续航。",
+  "风林旅团的成年守卫，用荆棘箭与追击守护森林边界。",
+  "踏上远征的成年剑士，瞄准受伤敌人完成最后一击。",
+  "成年星灯使者，净化灼烧与控制，低稀有度也能承担关键职责。",
+  "经验丰富的石盾卫士，在前排承伤，以反击保护同伴。",
+  "成年黎明龙骑，龙翼圣盾同时提供群体保护与反击。",
+  "成年星渊魔女，禁锢对手并吸取生命，擅长持久战。",
+  "成年生命神谕，拥有独特复苏力量，能唤回倒下的伙伴。",
+  "风暴枪王的穿刺会连锁命中，适合清理多个敌人。",
+  "成年火山武姬，熔岩破阵结合灼烧与破盾，克制护盾敌群。",
+  "成年潮歌巫女，以群体治疗与净化抵御持续伤害。",
+  "沙漠守望者依靠坚岩反击与再生，适合长时间守住前排。",
+  "成年雪林猎手，用冰箭控制后排，为同伴争取行动时间。",
+  "成年花灵术士，在攻击之外为同伴提供护盾与祝福。",
+  "暗夜刺客优先收割残血，并通过吸血维持自身生命。",
+  "成年机巧师将齿轮改造为连锁弩箭，擅长多目标追击。",
+  "烈焰拳师以连拳点燃敌人，让追击与持续伤害同时发生。",
+  "成年冰湖修女以冰泉持续恢复，并解除队伍的异常状态。",
+  "铜甲卫长把群体护盾视为职责，是稳定的前排保护者。",
+  "成年风铃法师的铃声同时祝福同伴与控制敌人。",
+  "影刃佣兵以破盾吸血打持久战，擅长攻击护盾目标。",
+  "成年灯塔医者以暖光护盾和再生守护即将倒下的伙伴。",
+  "荒野斥候瞄准残血敌人，用猎鹰标记追加追击。",
+  "蘑菇学徒用孢子附加灼烧，是容易培养的持续伤害角色。",
+  "矿山护卫从矿石中汲取保护力量，也能击碎敌人的护盾。",
+  "村庄药师善用草药，为同伴提供持续恢复。",
+  "沙丘弓手的飞砂箭可以破盾，并继续打击另一名敌人。",
+  "锻炉学徒将火星附在剑锋，用灼烧收割受伤的敌人。",
+  "雪乡旅者以朴素的雪花术控制敌人，为队伍提供保护。",
+  "海港水手在浪涛中磨炼战技，连锁攻击附带吸血。",
+  "成年林间歌者的歌声可以治疗全队，并留下持续恢复。",
+];
+heroes.forEach((h) => {
+  h.story = biographies[h.id];
+  h.age = [30, 32, 34].includes(h.id) ? 17 : 25 + (h.id % 13);
+});
 const skillEffects = {
+  chain: "额外打击另一名敌人",
   bless: "祝福最低生命队友",
   burn: "附加两次灼烧",
   drain: "恢复伤害的45%生命",
@@ -215,6 +270,7 @@ export const gear = [
 ];
 export function fresh() {
   return {
+    ...expansionFresh(),
     version: 2,
     gems: 3000,
     coins: 1000,
@@ -249,14 +305,19 @@ export function fresh() {
 }
 export function migrate(s) {
   if (s?.version === 1) {
-    const next = { ...fresh(), ...s, version: 2 };
-    return validSave(next) ? next : null;
+    const next = { ...fresh(), ...s, edition: s.edition, version: 2 };
+    return validSave(next) ? expandSave(next) : null;
   }
   const next =
     s?.version === 2
-      ? { ...fresh(), ...s, idleClaimAt: s.idleClaimAt ?? Date.now() }
+      ? {
+          ...fresh(),
+          ...s,
+          edition: s.edition,
+          idleClaimAt: s.idleClaimAt ?? Date.now(),
+        }
       : s;
-  return validSave(next) ? next : null;
+  return validSave(next) ? expandSave(next) : null;
 }
 export function summon(state, count, rng = Math.random) {
   if (![1, 10].includes(count) || state.gems < count * 150)
@@ -300,7 +361,9 @@ export function power(state, id) {
     Math.min(10, (state.collection[id] || 1) - 1) * 8 +
     (level(state, id) - 1) * 5 +
     equipped +
-    (state.stars?.[id] || 0) * 60
+    (state.stars?.[id] || 0) * 60 +
+    equipmentPower(state, id) +
+    (state.skills?.[id] || 0) * 8
   );
 }
 export function teamPower(state) {
@@ -405,17 +468,34 @@ export function battle(
     state.gems += reward;
     state.coins += coins;
   }
+  const foughtStage = state.stage;
+  let loot = null;
+  if (result.won) {
+    loot = awardLoot(state, foughtStage, rng, elite);
+    if (!elite) state.stage = Math.min(maxStage, state.cleared + 1);
+  }
   return {
     ...result,
     reward,
     coins,
-    stage: state.stage,
+    stage: foughtStage,
+    nextStage: state.stage,
     elite,
-    boss: state.stage % 3 === 0,
+    boss: foughtStage % 3 === 0,
+    loot,
   };
 }
 
 export function applyAction(state, action, rng = Math.random, support = null) {
+  expandSave(state);
+  const extra = expansionAction(state, action, rng, {
+    heroes,
+    power,
+    combatTeam,
+    simulateCombat,
+    dailyState,
+  });
+  if (extra.handled) return extra.result;
   switch (action.type) {
     case "autoEquip":
       return autoEquip(state);
@@ -442,6 +522,11 @@ export function applyAction(state, action, rng = Math.random, support = null) {
       return claimDaily(state, action.task);
     case "tower":
       return towerBattle(state, rng, support);
+    case "ticketSummon": {
+      state.tickets--;
+      state.gems += 150;
+      return summon(state, 1, rng);
+    }
     case "summon":
       return summon(state, action.count, rng);
     case "upgrade":
@@ -487,6 +572,7 @@ export function validSave(s) {
     !(
       s &&
       s.version === 2 &&
+      validExpansion(s) &&
       Number.isSafeInteger(s.gems) &&
       s.gems >= 0 &&
       Number.isSafeInteger(s.coins) &&
@@ -778,6 +864,8 @@ export function combatTeam(state, support = null) {
   const units = state.team.map((id) => ({
     ...heroes[id],
     power: power(state, id),
+    ...equipmentCombat(state, id),
+    ability: heroGrowth(state, heroes[id]),
   }));
   if (support) {
     if (units.length === 6) units.pop();

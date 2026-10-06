@@ -13,7 +13,11 @@ const palettes = [
   ["#728ca6", "#667a91", "#3c465f", "#d6ba89"],
 ];
 export function sprite(hero, { background = false, enemy = false } = {}) {
-  const n = enemy ? 1 : hero.id % 12;
+  const n = enemy
+    ? 1
+    : hero.id < 12
+      ? hero.id
+      : { 骑士: 11, 战士: 1, 游侠: 6, 法师: 5, 治疗: 7 }[hero.role];
   const variant = enemy ? 0 : Math.floor(hero.id / 12);
   const [hair, cloth, shade, trim] = enemy
     ? ["#a0a4ad", "#6e4760", "#342f4a", "#fd826f"]
