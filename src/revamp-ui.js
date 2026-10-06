@@ -15,11 +15,17 @@ import {
   formationPositions,
 } from "./progression.js";
 import { heroes, level, power, formationBonuses, combatTeam } from "./game.js";
-import { sprite, scenery } from "./pixel.js";
+import { sprite, scenery, pixelCharacter } from "./pixel.js";
 export function illustration(h, small = false) {
-  const sheet = Math.floor(h.id / 16),
-    cell = h.id % 16;
-  return `<span class="hero-illustration ${small ? "art-avatar" : ""}" role="img" aria-label="${h.name}角色立绘" style="--art:url('${new URL(`art/heroes-${sheet}.webp`, document.baseURI).href}');--art-x:${((cell % 4) / 3) * 100}%;--art-y:${(Math.floor(cell / 4) / 3) * 100}%"></span>`;
+  if (small) return pixelCharacter(h, 'hero-illustration art-avatar');
+  if ([0, 8, 9, 10].includes(h.id)) {
+    const url = new URL(`art/hero-${h.id}.webp`, document.baseURI).href;
+    return `<span class="hero-illustration painted-character standalone-portrait" role="img" aria-label="${h.name}角色立绘"><svg viewBox="0 0 2 3" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><image href="${url}" width="2" height="3"/></svg></span>`;
+  }
+  const sheet = Math.floor(h.id / 16), cell = h.id % 16;
+  const url = new URL(`art/heroes-${sheet}.webp`, document.baseURI).href;
+  const x = (cell % 4)*3, y = Math.floor(cell/4)*4;
+  return `<span class="hero-illustration painted-character" role="img" aria-label="${h.name}角色立绘"><svg viewBox="${x} ${y} 3 4" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><defs><clipPath id="paint-clip-${h.id}"><rect x="${x}" y="${y}" width="3" height="4"/></clipPath></defs><image href="${url}" width="12" height="16" preserveAspectRatio="none" clip-path="url(#paint-clip-${h.id})"/></svg></span>`;
 }
 export function itemIcon(i) {
   const color = ["#a5b5c6", "#76cfe8", "#bf91ff", "#ffcf78"][i.quality];

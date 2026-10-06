@@ -952,3 +952,133 @@ button:focus-visible {
   background: linear-gradient(145deg, #22334b, #101c32);
   border-color: #ddbc80;
 }
+
+/* Original pixel cast: one consistent sprite across heroes, town and battles. */
+.pixel-character,
+.avatar-roster button > .pixel-character {
+  display: inline-block;
+  background-image: var(--sprite-url);
+  background-size: 800% 500%;
+  background-position: var(--sprite-x) var(--sprite-y);
+  background-repeat: no-repeat;
+  background-color: transparent;
+  image-rendering: pixelated;
+  aspect-ratio: 1;
+  border-radius: 0;
+  flex-shrink: 0;
+}
+.pixel-character.hero-art { width: 80px; height: 80px; }
+.pixel-character:after { display: none; }
+.hero-screen { background: #203b40; }
+.hero-screen .scene-tabs { background: #17373d; border-bottom: 3px solid #8b825a; }
+.hero-screen .scene-tabs button { border-radius: 2px; }
+.hero-showcase {
+  min-height: 290px;
+  height: 43dvh;
+  max-height: 420px;
+  background: #3c6661;
+  border-bottom: 3px solid #a99b69;
+}
+.hero-showcase > .pixel-scene { opacity: 1; filter: brightness(.92); }
+.hero-showcase:after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(#122c4255, transparent 36%, #17303955);
+  pointer-events: none;
+}
+.hero-nameplate { top: 12px; left: 15px; }
+.hero-nameplate small { color: #ffe6ac; letter-spacing: 1px; }
+.hero-nameplate h2 { font-size: 25px; color: #fff2d2; }
+.hero-nameplate > span { color: #f3dfb1; }
+.showcase-art { inset: 55px 18% 40px; align-items: center; z-index: 2; }
+.showcase-art > .pixel-character {
+  width: min(100%, 240px); height: auto; max-height: 100%;
+  aspect-ratio: 1; mask-image: none;
+  filter: drop-shadow(0 4px 0 #142d3660);
+  animation: pixel-breathe 2.4s steps(4, end) infinite;
+}
+.pixel-platform {
+  position: absolute; z-index: 1; width: 48%; height: 38px;
+  left: 26%; bottom: 46px;
+  background: repeating-linear-gradient(0deg, #9da99b 0 5px, #7f968b 5px 8px);
+  border: 4px solid #c4cbb1; border-bottom: 8px solid #4a706a;
+  border-radius: 50%; box-shadow: 0 8px 0 #284d4970;
+}
+.hero-showcase > .six-equipment { inset: 89px 12px 72px; }
+.hero-showcase > .six-equipment button {
+  background: linear-gradient(#345452, #193939);
+  border-width: 2px; border-radius: 3px;
+  box-shadow: inset 0 0 0 2px #0d252d, 2px 3px 0 #142c32a0;
+  width: 52px; height: 55px;
+}
+.hero-skill-token {
+  position: absolute; right: 77px; bottom: 42px; z-index: 4;
+  display: flex; align-items: center; gap: 5px;
+  border: 1px solid #d6bc75; border-radius: 2px;
+  background: #173838e8; padding: 4px 6px; max-width: 160px;
+}
+.hero-skill-token span { font-size: 21px; color: #ffe2a3; }
+.hero-skill-token small { font-size: 10px; color: #fff0c8; }
+.hero-status-bar { background: #153b39ef; border: 0; border-top: 2px solid #809785; backdrop-filter: none; }
+.hero-command-bar { background: #254846; border-bottom: 2px solid #60746a; }
+.hero-command-bar button { border-radius: 3px; box-shadow: inset 0 -3px 0 #11242b40; }
+.hero-screen .roster-tools { background: #233f40; }
+.hero-screen .roster-tools select { border-radius: 2px; background: #163039; }
+.avatar-roster { background: #172f34; gap: 8px; grid-auto-rows: 94px; }
+.avatar-roster > button {
+  height: 94px; min-height: 94px; border: 2px solid var(--accent);
+  border-radius: 3px; padding: 2px; gap: 0;
+  background: linear-gradient(#34514f, #223c40);
+  box-shadow: inset 0 0 0 2px #142a32;
+}
+.avatar-roster button > .pixel-character { width: 100%; height: auto; max-height: 68px; aspect-ratio: 1; position: relative; inset: auto; }
+.avatar-roster button > small { color: #f9e8c3; font-size: 10px; }
+.avatar-roster button.selected { outline: 2px solid #ffdf80; background: #68715a; }
+.avatar-roster button.unowned { opacity: .52; }
+.avatar-roster button.unowned .pixel-character { filter: grayscale(.65); }
+.hero-profile > .pixel-character { width: 190px; height: 190px; margin: auto; }
+.formation-slots .pixel-character { width: 90px; height: 90px; }
+.summon-feature .pixel-character { background-size: 800% 500%; }
+@keyframes pixel-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+@media (max-height: 720px) {
+  .hero-showcase { min-height: 240px; }
+  .hero-showcase > .six-equipment { inset: 72px 10px 63px; }
+  .hero-showcase > .six-equipment button { width: 46px; height: 48px; }
+  .showcase-art { inset: 45px 18% 36px; }
+  .hero-skill-token { right: 64px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .showcase-art > .pixel-character { animation: none; }
+}
+.pixel-character.hero-art { height: auto !important; aspect-ratio: 1; }
+.summon-feature > .pixel-character { height: auto; width: 100%; max-width: 270px; aspect-ratio: 1; mask-image: none; }
+.card .portrait > .pixel-character { height: auto; width: 100%; aspect-ratio: 1; min-height: 0; }
+.skill-cut-in .pixel-character { background-size: 800% 500%; }
+/* Atlas cells are 175.25 × 224.4, keeping the artist's proportions. */
+.pixel-character { aspect-ratio: 175.25 / 224.4; }
+.pixel-character.hero-art { aspect-ratio: 175.25 / 224.4; }
+.showcase-art > .pixel-character { aspect-ratio: 175.25 / 224.4; width: auto; height: 100%; }
+.avatar-roster button > .pixel-character { aspect-ratio: 175.25 / 224.4; width: auto; height: 65px; max-width: 100%; }
+.hero-profile > .pixel-character { width: 170px; height: auto; }
+.summon-feature > .pixel-character { aspect-ratio: 175.25 / 224.4; }
+.card .portrait > .pixel-character { aspect-ratio: 175.25 / 224.4; }
+.pixel-character,
+.avatar-roster button > .pixel-character { background-image: none; }
+.pixel-character > svg { display: block; width: 100%; height: 100%; overflow: hidden; }
+.hero-showcase > .six-equipment button { height: 48px; }
+.hero-showcase > .six-equipment button:nth-child(2),
+.hero-showcase > .six-equipment button:nth-child(5) { top: calc(50% - 24px); }
+.six-equipment .item-icon { height: 26px; }
+.six-equipment button > span { font-size: 20px; }
+@media (max-height: 720px) {
+  .hero-showcase > .six-equipment { inset: 72px 10px 48px; }
+  .hero-showcase > .six-equipment button { height: 40px; }
+  .hero-showcase > .six-equipment button:nth-child(2),
+  .hero-showcase > .six-equipment button:nth-child(5) { top: calc(50% - 20px); }
+}
+.hero-showcase > .six-equipment button { min-height: 48px; }
+@media (max-height: 720px) {
+  .hero-showcase > .six-equipment button { min-height: 40px; }
+}

@@ -1,8 +1,9 @@
 import "./style.css";
 import "./revamp.css";
+import "./hero-ui.css";
+import { galleryView, heroDetailView, heroSkills, gameIcon } from "./hero-ui.js";
 import {
   illustration,
-  equipmentSlots,
   formationView,
   forgeView,
   dungeonView,
@@ -51,6 +52,10 @@ let state = fresh(),
   townPage = 1,
   selectedHero = 8,
   collectionMode = "heroes",
+  heroDetailOpen = false,
+  heroCodex = false,
+  heroElement = "全部",
+  heroGalleryScroll = 0,
   homeDrawer = "",
   communityPanel = "guild",
   rosterFilter = "全部",
@@ -143,6 +148,8 @@ function revampContext() {
   };
 }
 function render() {
+  $.classList.toggle('hero-detail-open', tab === 'collection' && collectionMode === 'heroes' && heroDetailOpen);
+  $.classList.toggle('hero-gallery-open', tab === 'collection' && collectionMode === 'heroes' && !heroDetailOpen);
   const retainedDetails =
     $.dataset.screen === tab
       ? [
@@ -157,6 +164,7 @@ function render() {
     ".screen-panel",
     ".home-drawer",
     ".avatar-roster",
+    ".hero-gallery-grid",
   ];
   const retained =
     $.dataset.screen === tab
@@ -176,7 +184,7 @@ function render() {
   ]
     .map(
       ([id, icon, label]) =>
-        `<button data-tab="${id}" class="${tab === id ? "active" : ""}" aria-label="${label}"><span>${icon}</span><small>${label}</small></button>`,
+        `<button data-tab="${id}" class="${tab === id ? "active" : ""}" aria-label="${label}">${gameIcon(id)}<small>${label}</small></button>`,
     )
     .join(
       "",
@@ -223,6 +231,7 @@ function render() {
     (b) =>
       (b.onclick = () => {
         collectionMode = b.dataset.collectionMode;
+        heroDetailOpen = false;
         render();
       }),
   );
@@ -230,9 +239,36 @@ function render() {
     (b) =>
       (b.onclick = () => {
         selectedHero = Number(b.dataset.selectHero);
+        heroGalleryScroll = $.querySelector('.hero-gallery-grid')?.scrollTop || 0;
+        heroDetailOpen = true;
         render();
       }),
   );
+  $.querySelectorAll('[data-hero-back]').forEach(b => b.onclick = () => {
+    heroDetailOpen = false;
+    render();
+    const list = $.querySelector('.hero-gallery-grid');
+    if (list) list.scrollTop = heroGalleryScroll;
+  });
+  $.querySelectorAll('[data-gallery-mode]').forEach(b => b.onclick = () => { heroCodex = b.dataset.galleryMode === 'codex'; render(); });
+  const codexButton = $.querySelector('[data-gallery-codex]');
+  if (codexButton) codexButton.onclick = () => { heroCodex = !heroCodex; render(); };
+  $.querySelectorAll('[data-hero-filter]').forEach(b => b.onclick = () => { heroElement = b.dataset.heroFilter; render(); });
+  $.querySelectorAll('[data-hero-step]').forEach(b => b.onclick = () => {
+    const ids = heroes.filter(h => (heroCodex || state.collection[h.id]) && (heroElement === '全部' || h.element === heroElement) && (rosterRole === '全部' || h.role === rosterRole)).sort((a,b) => Number(!!state.collection[b.id]) - Number(!!state.collection[a.id]) || heroSortValue(b) - heroSortValue(a)).map(h => h.id);
+    const index = ids.indexOf(selectedHero);
+    selectedHero = ids[(index + Number(b.dataset.heroStep) + ids.length) % ids.length] ?? selectedHero;
+    render();
+  });
+  $.querySelectorAll('[data-hero-growth]').forEach(b => b.onclick = () => openHero(Number(b.dataset.heroGrowth)));
+  $.querySelectorAll('[data-hero-skill]').forEach(b => b.onclick = () => {
+    const skill = heroSkills(heroes[selectedHero])[Number(b.dataset.heroSkill)];
+    modal(`<div class="hero-info-dialog">${gameIcon(skill.icon)}<small>英雄技能</small><h2>${skill.name}</h2><p>${skill.text}</p><button class="primary" data-close>关闭</button></div>`, skill.name);
+  });
+  $.querySelectorAll('[data-hero-story]').forEach(b => b.onclick = () => {
+    const h = heroes[Number(b.dataset.heroStory)];
+    modal(`<div class="hero-info-dialog">${sprite(h)}<small>${h.faction} · ${h.role}</small><h2>${h.name} · ${h.title}</h2><p>${h.story}</p><button class="primary" data-close>返回</button></div>`, '英雄档案');
+  });
   $.querySelectorAll("[data-home-drawer]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -277,6 +313,7 @@ function render() {
         if (b.dataset.streetHero) {
           selectedHero = Number(b.dataset.streetHero);
           collectionMode = "heroes";
+          heroDetailOpen = true;
         }
         homeDrawer = "";
         notice = "";
@@ -695,8 +732,7 @@ function presetView() {
   return `<section class="preset-board"><div class="section-heading"><h3>小队方案</h3><button class="primary" data-auto-equip ${!state.team.length ? "disabled" : ""}>一键装备</button></div>${synergyView()}<p>按阵容顺序分配最佳空闲装备，保留未上阵角色的装备。</p><div class="preset-grid">${[0, 1, 2].map((i) => `<form data-preset-form="${i}"><input name="name" maxlength="12" aria-label="阵容 ${i + 1} 名称" value="${esc(state.presets?.[i]?.name || "阵容 " + (i + 1))}"><small>${state.presets?.[i]?.team.map((id) => heroes[id].name).join(" · ") || "空的阵容槽"}</small><div><button class="secondary" type="submit" ${!state.team.length ? "disabled" : ""}>保存当前阵容</button><button class="secondary" type="button" data-preset-load="${i}" ${!state.presets?.[i] ? "disabled" : ""}>切换</button></div></form>`).join("")}</div></section>`;
 }
 function collectionView() {
-  const h = heroes[selectedHero] || heroes[8],
-    owned = !!state.collection[h.id];
+  const h = heroes[selectedHero] || heroes[8];
   const modeNav = `<div class="scene-tabs">${[
     ["heroes", "英雄"],
     ["formation", "阵容"],
@@ -709,30 +745,11 @@ function collectionView() {
     .join("")}</div>`;
   if (collectionMode === "formation") return formationView(state, modeNav);
   if (collectionMode === "forge") return forgeView(state, modeNav, h.id);
-  return `<div class="hero-screen">${modeNav}<div class="hero-showcase" style="--accent:${rarities[h.rarity].color}">${scenery("night")}<div class="hero-nameplate"><small>${h.rarity} · ${h.element} · ${h.role}</small><h2>${h.name}</h2><span>${h.title}</span></div><div class="showcase-art">${illustration(h)}</div>${owned ? equipmentSlots(state, h.id) : ""}<div class="hero-status-bar"><span>Lv.${level(state, h.id)}</span><span>⚔ ${power(state, h.id)}</span><span>${"★".repeat(state.stars[h.id] || 0) || h.faction}</span></div></div><div class="hero-command-bar"><button class="secondary" data-team="${h.id}" ${owned ? "" : "disabled"}>${state.team.includes(h.id) ? "✓ 上阵" : "加入队伍"}</button><button class="primary" data-upgrade="${h.id}" ${!owned || level(state, h.id) >= 50 || state.coins < upgradeCost(state, h.id) ? "disabled" : ""}>升级<small>◈${upgradeCost(state, h.id)}</small></button><button class="secondary" data-detail="${h.id}">技能 / 升星</button></div><div class="roster-tools"><select id="roster-sort" aria-label="角色排序">${[
-    ["power", "战力"],
-    ["level", "等级"],
-    ["stars", "星级"],
-    ["rarity", "稀有度"],
-  ]
-    .map(
-      ([v, n]) =>
-        `<option value="${v}" ${rosterSort === v ? "selected" : ""}>${n}</option>`,
-    )
-    .join(
-      "",
-    )}</select><select id="roster-role" aria-label="职业筛选">${["全部", "骑士", "战士", "游侠", "法师", "治疗"].map((r) => `<option ${rosterRole === r ? "selected" : ""}>${r}</option>`).join("")}</select></div><div class="avatar-roster">${heroes
-    .filter((h) => rosterRole === "全部" || h.role === rosterRole)
-    .sort(
-      (a, b) =>
-        Number(!!state.collection[b.id]) - Number(!!state.collection[a.id]) ||
-        heroSortValue(b) - heroSortValue(a),
-    )
-    .map(
-      (h) =>
-        `<button data-select-hero="${h.id}" class="${selectedHero === h.id ? "selected" : ""} ${state.collection[h.id] ? "" : "unowned"}" style="--accent:${rarities[h.rarity].color}">${illustration(h, true)}<span>${h.rarity}</span><small>${h.name}</small></button>`,
-    )
-    .join("")}</div></div>`;
+  if (heroDetailOpen) return heroDetailView(state, h.id);
+  return galleryView(state, {
+    modeNav, filter: heroElement, role: rosterRole, sort: rosterSort,
+    codex: heroCodex, sortValue: heroSortValue,
+  });
 }
 function supportView() {
   if (!cloud.user)
