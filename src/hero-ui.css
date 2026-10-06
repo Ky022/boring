@@ -188,3 +188,5 @@
 /* Keep the face below the title ribbon at every portrait resolution. */
 .dossier-art { inset: 70px 0 160px; }
 @media(max-height:700px) { .dossier-art { inset: 70px 0 120px; } }
+.painted-character { position: relative; }
+.portrait-loading { position: absolute; inset: 35% 0 auto; text-align: center; color: #dfc89c; font-size: 11px; letter-spacing: 1px; text-shadow: 0 1px 4px #152033; pointer-events: none; }

@@ -189,6 +189,7 @@ function render() {
     .join(
       "",
     )}</nav>${storageWarning ? `<p class="storage-notice">${esc(storageWarning)}</p>` : ""}${notice ? `<div class="game-toast" role="status">${esc(notice)}</div>` : ""}`;
+  wirePortraitLoading($);
   const full = $.querySelector("[data-fullscreen]");
   if (full)
     full.onclick = async () => {
@@ -1183,11 +1184,26 @@ function tone(freq, duration = 0.15) {
     osc.stop(audio.currentTime + duration);
   } catch {}
 }
+function wirePortraitLoading(root) {
+  root.querySelectorAll('.painted-character image').forEach(image => {
+    const art = image.closest('.painted-character');
+    const loading = document.createElement('span');
+    loading.className = 'portrait-loading';
+    loading.textContent = '立绘加载中…';
+    art.append(loading);
+    const probe = new Image();
+    probe.src = image.getAttribute('href');
+    probe.decode().then(() => loading.remove()).catch(() => {
+      loading.textContent = '立绘未能加载，请重新打开';
+    });
+  });
+}
 function modal(content, label) {
   const dialog = document.createElement("dialog");
   dialog.className = "cinematic";
   dialog.setAttribute("aria-label", label);
   dialog.innerHTML = content;
+  wirePortraitLoading(dialog);
   document.body.append(dialog);
   const timers = [];
   let closed = false;
