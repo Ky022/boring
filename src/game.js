@@ -7,6 +7,7 @@ import {
   validExpansion,
   awardLoot,
   heroGrowth,
+  formationPositions,
 } from "./progression.js";
 import { simulateCombat, formationBonuses } from "./combat.js";
 export { simulateCombat, formationBonuses } from "./combat.js";
@@ -546,6 +547,7 @@ export function applyAction(state, action, rng = Math.random, support = null) {
       )
         throw new Error("队伍无效");
       state.team = action.team;
+      state.formation = null;
       return null;
     case "stage":
       if (
@@ -845,7 +847,11 @@ export function savePreset(state, slot, name) {
   const label = String(name || `阵容 ${slot + 1}`).trim();
   if (!label || label.length > 12) throw new Error("阵容名称需要1至12字");
   state.presets ??= [null, null, null];
-  state.presets[slot] = { name: label, team: [...state.team] };
+  state.presets[slot] = {
+    name: label,
+    team: [...state.team],
+    formation: formationPositions(state),
+  };
   return state.presets[slot];
 }
 export function loadPreset(state, slot) {
@@ -858,18 +864,24 @@ export function loadPreset(state, slot) {
   )
     throw new Error("没有可用的阵容预设");
   state.team = [...state.presets[slot].team];
+  state.formation = state.presets[slot].formation
+    ? [...state.presets[slot].formation]
+    : null;
   return { name: state.presets[slot].name };
 }
 export function combatTeam(state, support = null) {
   const units = state.team.map((id) => ({
     ...heroes[id],
+    position: formationPositions(state).indexOf(id),
     power: power(state, id),
     ...equipmentCombat(state, id),
     ability: heroGrowth(state, heroes[id]),
   }));
   if (support) {
     if (units.length === 6) units.pop();
-    units.push({ ...support, support: true });
+    const used = new Set(units.map((u) => u.position));
+    const position = [3, 4, 5, 0, 1, 2].find((p) => !used.has(p));
+    units.push({ ...support, support: true, position });
   }
   return units;
 }

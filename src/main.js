@@ -11,7 +11,7 @@ import {
   wireRevamp,
   openEquipmentRevamp,
 } from "./revamp-ui.js";
-import { rewardText } from "./progression.js";
+import { rewardText, formationPositions } from "./progression.js";
 import { districtArt } from "./town.js";
 import { portrait, sprite, scenery, monster } from "./pixel.js";
 import {
@@ -263,6 +263,8 @@ function render() {
     (b) =>
       (b.onclick = () => {
         tab = b.dataset.tab;
+        if (tab === "adventure")
+          chapterPage = Math.floor((state.stage - 1) / 3);
         if (b.dataset.buildingKind === "tower") adventureMode = "tower";
         else if (tab === "adventure") adventureMode = "campaign";
         if (b.dataset.buildingKind === "friends") communityPanel = "friends";
@@ -297,12 +299,20 @@ function render() {
       (b.onclick = () =>
         run(async () => {
           const id = +b.dataset.team;
-          let team = state.team.includes(id)
-            ? state.team.filter((x) => x !== id)
-            : [...state.team, id];
-          if (team.length > 6)
-            throw new Error("队伍最多 6 人，请先移除一位角色");
-          await dispatch({ type: "team", team });
+          const positions = formationPositions(state),
+            index = positions.indexOf(id);
+          if (index >= 0) positions[index] = null;
+          else {
+            const preferred =
+              heroes[id].role === "治疗"
+                ? [3, 4, 5, 0, 1, 2]
+                : [0, 1, 2, 3, 4, 5];
+            const position = preferred.find((i) => positions[i] === null);
+            if (position === undefined)
+              throw Error("队伍最多 6 人，请到阵容页点站位替换");
+            positions[position] = id;
+          }
+          await dispatch({ type: "formation", positions });
           notice = "队伍已更新";
         })),
   );
@@ -1235,7 +1245,7 @@ function showBattle(outcome) {
   if (![1, 2, 4].includes(speed)) speed = 1;
   const units = [...outcome.players, ...outcome.enemies];
   const unit = (u, enemy) =>
-    `<div class="combat-unit ${enemy ? "enemy-unit" : "ally-unit"}" data-unit="${u.unitId}">${enemy && !outcome.opponent ? monster(u.kind || 0) : sprite(heroes[u.id])}<b>${esc(u.name)}${u.support ? " · 支援" : ""}</b><div class="hp-track"><div class="hp-fill"></div></div><small class="unit-hp">${u.maxHp}</small><span class="unit-damage"></span></div>`;
+    `<div class="combat-unit ${enemy ? "enemy-unit" : "ally-unit"}" data-unit="${u.unitId}" ${u.position !== undefined ? `style="grid-column:${(u.position % 3) + 1};grid-row:${Math.floor(u.position / 3) + 1}"` : ""}>${enemy && !outcome.opponent ? monster(u.kind || 0) : sprite(heroes[u.id])}<b>${esc(u.name)}${u.support ? " · 支援" : ""}</b><div class="hp-track"><div class="hp-fill"></div></div><small class="unit-hp">${u.maxHp}</small><span class="unit-damage"></span></div>`;
   const title = outcome.opponent
     ? "ARENA · " + esc(outcome.opponent)
     : outcome.floor

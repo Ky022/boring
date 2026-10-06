@@ -203,3 +203,22 @@ test("one-click claims only eligible mail and growth rewards, never grants twice
   assert.throws(() => act(s, { type: "rewardAll" }));
   assert.ok(validSave(s));
 });
+test("independent empty formation slots, swaps and presets preserve rear positions", () => {
+  const s = fresh();
+  act(s, { type: "formation", positions: [8, 9, null, null, null, 10] });
+  assert.equal(combatTeam(s).find((h) => h.id === 10).position, 5);
+  assert.ok(validSave(s));
+  act(s, { type: "presetSave", slot: 0, name: "后排治疗" });
+  act(s, { type: "formation", positions: [8, null, null, null, null, 10] });
+  assert.equal(s.formation[5], 10);
+  assert.deepEqual(s.team, [8, 10]);
+  assert.throws(() =>
+    act(s, { type: "formation", positions: [8, null, 8, null, null, 10] }),
+  );
+  act(s, { type: "presetLoad", slot: 0 });
+  assert.deepEqual(s.formation, [8, 9, null, null, null, 10]);
+  assert.equal(migrate(s).formation[5], 10);
+  const bad = structuredClone(s);
+  bad.team = [8, 10];
+  assert.equal(validSave(bad), false);
+});

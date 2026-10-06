@@ -80,6 +80,7 @@ export const achievements = [
 const day = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
 export function expansionFresh() {
   return {
+    formation: null,
     edition: 1,
     legacyMigrated: false,
     items: [],
@@ -326,8 +327,31 @@ function randomItem(s, quality, rng) {
     set: ["flame", "moon", "stone"][Math.min(2, Math.floor(rng() * 3))],
   });
 }
+export function formationPositions(s) {
+  return s.formation
+    ? [...s.formation]
+    : Array.from({ length: 6 }, (_, i) => s.team[i] ?? null);
+}
+export function validFormation(s, positions, team = s.team) {
+  if (!Array.isArray(positions) || positions.length !== 6) return false;
+  const ids = positions.filter((id) => id !== null);
+  return (
+    new Set(ids).size === ids.length &&
+    ids.every((id) => Number.isInteger(id) && s.collection[id]) &&
+    JSON.stringify(ids) === JSON.stringify(team)
+  );
+}
 export function expansionAction(s, a, rng, ctx) {
   const result = (value) => ({ handled: true, result: value ?? null });
+  if (a.type === "formation") {
+    if (!Array.isArray(a.positions)) throw Error("站位无效");
+    const team = a.positions.filter((id) => id !== null);
+    if (!validFormation(s, a.positions, team))
+      throw Error("站位包含重复或未拥有英雄");
+    s.formation = [...a.positions];
+    s.team = team;
+    return result();
+  }
   if (a.type === "loadout") {
     if (
       !Number.isInteger(a.id) ||
@@ -587,6 +611,12 @@ export function expansionAction(s, a, rng, ctx) {
 }
 export function validExpansion(s) {
   if (s.edition === undefined) return true;
+  if (
+    !s.collection ||
+    typeof s.collection !== "object" ||
+    Array.isArray(s.collection)
+  )
+    return false;
   const int = (n, max = Number.MAX_SAFE_INTEGER) =>
     Number.isSafeInteger(n) && n >= 0 && n <= max;
   const rec = (v) => v && typeof v === "object" && !Array.isArray(v);
@@ -616,6 +646,19 @@ export function validExpansion(s) {
         typeof i.name === "string" &&
         i.name.length <= 30 &&
         !!sets[i.set],
+    )
+  )
+    return false;
+  if (
+    s.formation !== undefined &&
+    s.formation !== null &&
+    !validFormation(s, s.formation)
+  )
+    return false;
+  if (
+    s.presets &&
+    !s.presets.every(
+      (p) => !p || !p.formation || validFormation(s, p.formation, p.team),
     )
   )
     return false;

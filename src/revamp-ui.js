@@ -12,6 +12,7 @@ import {
   achievementProgress,
   newcomerTasks,
   itemStatText,
+  formationPositions,
 } from "./progression.js";
 import { heroes, level, power, formationBonuses, combatTeam } from "./game.js";
 import { sprite, scenery } from "./pixel.js";
@@ -50,7 +51,7 @@ export function formationView(s, nav) {
   return `<div class="formation-screen revamped-formation">${nav}<div class="formation-scene">${scenery("forest")}<div class="formation-heading"><small>FORMATION</small><h2>出征小队</h2><span>战力 ${s.team.reduce((n, id) => n + power(s, id), 0)}</span></div><div class="formation-slots">${Array.from(
     { length: 6 },
     (_, i) => {
-      const h = heroes[s.team[i]];
+      const h = heroes[formationPositions(s)[i]];
       return `<button data-position="${i}"><small>${i < 3 ? "前排" : "后排"} ${(i % 3) + 1}</small>${h ? sprite(h) : "<span>＋</span>"}<b>${h ? h.name : "选择英雄"}</b><em>${h ? `Lv.${level(s, h.id)} · ${h.role}` : "点击上阵"}</em></button>`;
     },
   ).join(
@@ -170,7 +171,22 @@ export function wireRevamp(ctx) {
         }
         for (const h of pool)
           if (!team.includes(h.id) && team.length < 6) team.push(h.id);
-        await dispatch({ type: "team", team });
+        const front = team
+          .filter((id) => ["骑士", "战士"].includes(heroes[id].role))
+          .slice(0, 3);
+        for (const id of team)
+          if (
+            front.length < 3 &&
+            !front.includes(id) &&
+            heroes[id].role !== "治疗"
+          )
+            front.push(id);
+        const back = team.filter((id) => !front.includes(id));
+        while (back.length > 3) front.push(back.shift());
+        const positions = Array.from({ length: 6 }, () => null);
+        front.forEach((id, i) => (positions[i] = id));
+        back.forEach((id, i) => (positions[i + 3] = id));
+        await dispatch({ type: "formation", positions });
         setNotice("已选择前排、治疗与强力输出，可继续点站位调整");
       });
   root.querySelectorAll("[data-loadout-auto]").forEach(
@@ -269,7 +285,7 @@ export function wireRevamp(ctx) {
 }
 export function openFormation(position, ctx) {
   const s = ctx.getState(),
-    current = s.team[position],
+    current = formationPositions(s)[position],
     m = ctx.modal(
       `<h2>${position < 3 ? "前排" : "后排"} ${(position % 3) + 1} · 选择英雄</h2><p>点英雄替换；已上阵英雄会交换位置。</p><select data-picker-role aria-label="组队职业筛选">${["全部", "骑士", "战士", "游侠", "法师", "治疗"].map((r) => `<option>${r}</option>`).join("")}</select><div class="team-selection">${heroes
         .filter((h) => s.collection[h.id])
@@ -280,7 +296,7 @@ export function openFormation(position, ctx) {
         )
         .join(
           "",
-        )}</div>${current !== undefined ? '<button class="secondary" data-remove-position>卸下此英雄</button>' : ""}<p class="picker-error"></p><button class="primary" data-close>返回阵容</button>`,
+        )}</div>${current !== null ? '<button class="secondary" data-remove-position>卸下此英雄</button>' : ""}<p class="picker-error"></p><button class="primary" data-close>返回阵容</button>`,
       "选择组队英雄",
     );
   m.dialog.classList.add("team-picker-dialog");
@@ -296,7 +312,7 @@ export function openFormation(position, ctx) {
     if (ctx.isBusy()) return;
     try {
       await ctx.run(async () => {
-        await ctx.dispatch({ type: "team", team });
+        await ctx.dispatch({ type: "formation", positions: team });
         m.end();
         ctx.setNotice("阵容已保存");
       });
@@ -308,19 +324,23 @@ export function openFormation(position, ctx) {
     (b) =>
       (b.onclick = () => {
         const id = Number(b.dataset.pick),
-          team = [...ctx.getState().team],
+          team = formationPositions(ctx.getState()),
           old = team[position],
           idx = team.indexOf(id);
         if (idx >= 0) {
-          if (old !== undefined) [team[idx], team[position]] = [old, id];
-        } else team[Math.min(position, team.length)] = id;
+          [team[idx], team[position]] = [old, id];
+        } else team[position] = id;
         change(team);
       }),
   );
   const remove = m.dialog.querySelector("[data-remove-position]");
   if (remove)
     remove.onclick = () =>
-      change(ctx.getState().team.filter((_, i) => i !== position));
+      change(
+        formationPositions(ctx.getState()).map((id, i) =>
+          i === position ? null : id,
+        ),
+      );
 }
 export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
   const s = ctx.getState(),
