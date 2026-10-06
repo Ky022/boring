@@ -14,21 +14,16 @@ import {
   itemStatText,
   formationPositions,
 } from "./progression.js";
-import { heroes, level, power, formationBonuses, combatTeam } from "./game.js";
-import { sprite, scenery, pixelCharacter } from "./pixel.js";
+import { heroes, level, power, formationBonuses, combatTeam, stageEnemies, teamPower, enemyPower } from "./game.js";
+import { sprite, scenery, pixelCharacter, monster } from "./pixel.js";
 import { worldScene, screenBanner, rewardTiles } from "./world-ui.js";
-import { gameIcon } from "./hero-ui.js";
-let formationPosition = null, formationRole = "全部";
+import { paintedIcon } from "./sanctum-ui.js";
+import { gameIcon, elementBadge } from "./hero-ui.js";
+let formationPosition = null, formationRole = "全部", formationElement = "全部";
 export function illustration(h, small = false) {
   if (small) return pixelCharacter(h, 'hero-illustration art-avatar');
-  if ([0, 8, 9, 10].includes(h.id)) {
-    const url = new URL(`art/hero-${h.id}.webp`, document.baseURI).href;
-    return `<span class="hero-illustration painted-character standalone-portrait" role="img" aria-label="${h.name}角色立绘"><svg viewBox="0 0 2 3" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><image href="${url}" width="2" height="3"/></svg></span>`;
-  }
-  const sheet = Math.floor(h.id / 16), cell = h.id % 16;
-  const url = new URL(`art/heroes-${sheet}.webp`, document.baseURI).href;
-  const x = (cell % 4)*3, y = Math.floor(cell/4)*4;
-  return `<span class="hero-illustration painted-character" role="img" aria-label="${h.name}角色立绘"><svg viewBox="${x} ${y} 3 4" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><defs><clipPath id="paint-clip-${h.id}"><rect x="${x}" y="${y}" width="3" height="4"/></clipPath></defs><image href="${url}" width="12" height="16" preserveAspectRatio="none" clip-path="url(#paint-clip-${h.id})"/></svg></span>`;
+  const url = new URL(`art/hero-${h.id}.webp`, document.baseURI).href;
+  return `<span class="hero-illustration painted-character standalone-portrait" role="img" aria-label="${h.name}高清角色立绘"><svg viewBox="0 0 2 3" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><image href="${url}" width="2" height="3"/></svg></span>`;
 }
 export function itemIcon(i) {
   const color = ["#a5b5c6", "#76cfe8", "#bf91ff", "#ffcf78"][i.quality];
@@ -57,15 +52,8 @@ export function formationView(s, nav) {
   if (!roles.includes("治疗")) advice.push("建议加入治疗提高续航");
   if (s.team.length < 6) advice.push(`还有 ${6 - s.team.length} 个空位`);
   const synergies = formationBonuses(combatTeam(s));
-  return `<div class="formation-screen revamped-formation">${nav}<div class="formation-scene">${worldScene("battle-forest")}<div class="formation-heading"><small>FORMATION</small><h2>出征小队</h2><span>战力 ${s.team.reduce((n, id) => n + power(s, id), 0)}</span></div><div class="formation-slots">${Array.from(
-    { length: 6 },
-    (_, i) => {
-      const h = heroes[formationPositions(s)[i]];
-      return `<button data-position="${i}" class="${i === (formationPosition ?? formationPositions(s).indexOf(null)) ? "chosen-position" : ""}"><small>${i < 3 ? "前排" : "后排"} ${(i % 3) + 1}</small>${h ? sprite(h) : "<span>＋</span>"}<b>${h ? h.name : "选择英雄"}</b><em>${h ? `Lv.${level(s, h.id)} · ${h.role}` : "点击上阵"}</em></button>`;
-    },
-  ).join(
-    "",
-  )}</div></div><div class="screen-panel"><div class="formation-actions"><button class="primary" data-recommend>推荐阵容</button><button class="secondary" data-loadout-auto>一键穿戴</button></div><p class="team-advice">${advice.join(" · ") || "前排与治疗齐备，可按关卡调整输出。"}</p><div class="synergy-chips">${synergies.map((b) => `<span>${b.faction} · 攻击/生命 +${b.bonus * 100}%</span>`).join("") || "<span>同阵营 3 位 / 5 位触发共鸣</span>"}</div><details class="preset-details"><summary>保存与载入阵容</summary><div id="preset-mount"></div></details><button class="primary" data-tab="adventure">前往冒险 →</button></div><section class="inline-formation-picker"><div class="inline-picker-heading"><b>点击站位，再选择英雄</b><select data-inline-role aria-label="组队职业筛选">${["全部","骑士","战士","游侠","法师","治疗"].map(r=>`<option ${formationRole===r?"selected":""}>${r}</option>`).join("")}</select><button data-inline-clear class="secondary">卸下选中位置</button></div><div class="inline-formation-roster">${heroes.filter(h=>s.collection[h.id]&&(formationRole==="全部"||h.role===formationRole)).sort((a,b)=>power(s,b.id)-power(s,a.id)).map(h=>`<button data-pick="${h.id}" class="formation-card ${s.team.includes(h.id)?"deployed":""}" style="--rarity:${{R:"#a2afb6",SR:"#b39ac8",SSR:"#d8b16f",UR:"#df9cba"}[h.rarity]}"><small>Lv.${level(s,h.id)}</small>${sprite(h)}<b>${h.name}</b><em>${h.role} · ${power(s,h.id)}</em>${s.team.includes(h.id)?"<span>上阵中</span>":""}</button>`).join("")}</div></section></div>`;
+  const positions = formationPositions(s), chosen = formationPosition ?? Math.max(0, positions.indexOf(null)), foes = stageEnemies(s.stage);
+  return `<div class="formation-screen revamped-formation reference-formation">${nav}<div class="formation-scene">${worldScene("formation-court")}<div class="formation-vs"><span>我的小队</span><b>VS</b><span>第 ${s.stage} 关</span></div><div class="formation-slots">${positions.map((id,i)=>{const h=heroes[id];return `<button data-position="${i}" style="grid-row:${i%3+1};grid-column:${i<3?2:1}" class="${i===chosen?'chosen-position':''}" aria-label="${i<3?'前排':'后排'}${i%3+1}，${h?h.name:'空位'}"><span class="position-ring"></span><small>${i<3?'前排':'后排'} ${i%3+1}</small>${h?sprite(h):'<span class="empty-position">＋</span>'}<b>${h?h.name:'空位'}</b>${h?`<em>${elementBadge(h.element)}Lv.${level(s,h.id)}</em>`:''}</button>`}).join('')}</div><div class="formation-opponents">${Array.from({length:6},(_,i)=>{const e=foes[i];return `<div style="grid-row:${i%3+1};grid-column:${i<3?1:2}" class="${e?'occupied':''}"><span class="position-ring"></span>${e?`${monster(e.kind||0)}<b>${e.name}</b><em>${elementBadge(e.element)}敌方</em>`:''}</div>`}).join('')}</div><div class="formation-power"><span>本队战力 <b>${teamPower(s).toLocaleString()}</b></span><span>敌方战力 <b>${enemyPower(s.stage).toLocaleString()}</b></span></div></div><section class="inline-formation-picker"><div class="inline-formation-roster">${heroes.filter(h=>s.collection[h.id]&&(formationRole==="全部"||h.role===formationRole)&&(formationElement==="全部"||h.element===formationElement)).sort((a,b)=>power(s,b.id)-power(s,a.id)).map(h=>`<button data-pick="${h.id}" class="formation-card ${s.team.includes(h.id)?'deployed':''}" aria-label="选择${h.name}${s.team.includes(h.id)?'，已上阵':''}" style="--rarity:${{R:'#9eafb2',SR:'#b88cdc',SSR:'#dfb561',UR:'#ef91af'}[h.rarity]}"><small>Lv.${level(s,h.id)}</small>${elementBadge(h.element)}${sprite(h)}<b>${h.name}</b><em>${'★'.repeat(s.stars[h.id]||1)}</em>${s.team.includes(h.id)?'<span class="formation-check">✓</span>':''}</button>`).join('')||'<p class="formation-empty">这个分类没有已获得英雄</p>'}</div><div class="inline-picker-heading"><div class="formation-elements"><button data-formation-element="全部" class="${formationElement==='全部'?'active':''}" aria-label="全部属性">ALL</button>${['光','暗','水','火','风'].map(e=>`<button data-formation-element="${e}" class="${formationElement===e?'active':''}" aria-label="${e}属性">${elementBadge(e)}</button>`).join('')}</div><select data-inline-role aria-label="组队职业筛选">${['全部','骑士','战士','游侠','法师','治疗'].map(r=>`<option ${formationRole===r?'selected':''}>${r}</option>`).join('')}</select></div></section><div class="formation-bottom"><button data-inline-clear class="secondary" aria-label="卸下选中位置">卸下</button><button class="primary" id="fight" ${!s.team.length?'disabled':''}>挑战第 ${s.stage} 关</button><details class="formation-options"><summary aria-label="阵容设置">${paintedIcon('formation')}</summary><div class="screen-panel"><div class="formation-actions"><button class="primary" data-recommend>推荐阵容</button><button class="secondary" data-loadout-auto>一键穿戴</button></div><p class="team-advice">${advice.join(' · ')||'前排与治疗齐备'}</p><div class="synergy-chips">${synergies.map(b=>`<span>${b.faction} · 攻击/生命 +${b.bonus*100}%</span>`).join('')||'<span>同阵营 3 位 / 5 位触发共鸣</span>'}</div><details class="preset-details"><summary>保存与载入阵容</summary><div id="preset-mount"></div></details></div></details></div></div>`;
 }
 export function forgeView(s, nav, id) {
   return `<div class="forge-screen revamped-forge world-forge" data-panel="bag">${nav}${screenBanner("星灯锻造所",`强化石 ${s.stones} · 装备 ${s.items.length} 件`,"shield","town-east")}<div class="forge-panel-tabs"><button data-forge-panel="bag" class="active">装备背包</button><button data-forge-panel="shop">基础商店</button></div><div class="screen-panel"><button class="primary" data-equip="${id}">查看 ${heroes[id].name} 的六部位装备</button><details class="equipment-shop" open><summary>基础装备商店 · 每件 ◈300</summary><div class="shop-slots">${slots.map((slot) => `<button data-item-buy="${slot}">${itemIcon({ slot, quality: 0 })}<b>${slotNames[slot]}</b><small>金币 300</small><span>购买</span></button>`).join("")}</div></details><div class="bag-toolbar"><select data-bag-filter aria-label="装备部位筛选"><option value="all">全部部位</option>${slots.map(k=>`<option value="${k}">${slotNames[k]}</option>`).join("")}</select><select data-quality-filter aria-label="装备品质筛选"><option value="all">全部品质</option>${qualities.map((q,i)=>`<option value="${i}">${q}</option>`).join("")}</select></div><button class="secondary" data-salvage-common>批量分解未穿戴、未强化的普通装备</button><p class="muted">副本与主线可获得更高品质；穿戴中或锁定装备不可分解。</p><div class="equipment-bag">${
@@ -163,6 +151,7 @@ export function wireRevamp(ctx) {
   root.querySelectorAll('[data-position]').forEach(b => b.onclick = () => {
     formationPosition = Number(b.dataset.position); ctx.render();
   });
+  root.querySelectorAll('[data-formation-element]').forEach(b => b.onclick = () => { formationElement = b.dataset.formationElement; ctx.render(); });
   const rolePicker = root.querySelector('[data-inline-role]');
   if (rolePicker) rolePicker.onchange = () => { formationRole = rolePicker.value; ctx.render(); };
   root.querySelectorAll('.inline-formation-picker [data-pick]').forEach(b => b.onclick = () => run(async () => {

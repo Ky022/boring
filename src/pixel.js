@@ -367,5 +367,5 @@ export function monster(kind = 0) {
   const index = Math.max(0, Math.min(2, Number(kind) || 0));
   const x = index * 724;
   const url = new URL("art/enemies.webp", document.baseURI).href;
-  return `<svg class="hero-art pixel-sprite monster" viewBox="${x} 0 724 724" role="img" aria-label="${["荆棘史莱姆", "荒林哥布林", "石甲守卫"][index]}"><defs><clipPath id="enemy-cell-${index}"><rect x="${x}" y="0" width="724" height="724"/></clipPath></defs><image href="${url}" width="2172" height="724" clip-path="url(#enemy-cell-${index})"/></svg>`;
+  return `<svg class="hero-art pixel-sprite monster" viewBox="${x} 0 724 724" role="img" aria-label="${["荆棘史莱姆", "荒林哥布林", "石甲守卫"][index]}"><defs><clipPath id="enemy-cell-${index}"><rect x="${x + (index===1 ? 60 : 0)}" y="0" width="${index===1 ? 560 : 724}" height="724"/></clipPath></defs><image href="${url}" width="2172" height="724" clip-path="url(#enemy-cell-${index})"/></svg>`;
 }
