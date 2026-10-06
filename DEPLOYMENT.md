@@ -1,12 +1,12 @@
 # 上线联网版本
 
-目前 GitHub Pages 只提供静态前端。Cloudflare Workers 同时提供网页与 API，D1 提供持久数据库。正式联网后端尚未部署；本地数据库与测试账号不属于生产环境。
+目前 GitHub Pages 只提供静态前端。Cloudflare Workers 同时提供网页与 API，D1 提供持久数据库。正式 Worker 现已部署： https://astral-cards-online.astral-cards.workers.dev ，正式 D1 已执行 0001 与 0002 迁移，已有玩家进度保留。手机布局和双浏览器联网功能已在本地真实 D1 验证；公网 HTTPS 接口另行验证。本地数据库与测试账号不属于生产环境。
 
 ## 手机准备
 
 在 https://dash.cloudflare.com/sign-up 注册免费 Cloudflare 账号。无需使用公司电脑，也无需先购买域名。
 
-如果由 Codex 云环境代为部署，需要允许该环境访问 `dash.cloudflare.com`（登录）和 `api.cloudflare.com`（部署与数据库）。相关规则可在环境设置中保存。保存草稿不自动应用网络或发布应用。
+如果由 Codex 云环境代为部署，需要允许该环境访问 `dash.cloudflare.com`（登录）、`api.cloudflare.com`（部署与数据库）和 `astral-cards-online.astral-cards.workers.dev`（公网验证）。相关规则可在环境设置中保存。保存草稿不自动应用网络或发布应用。
 
 推荐使用手机完成官方设备授权，无需在聊天中传送密码或 API Token。运行以下命令后，打开 Wrangler 返回的官方 Cloudflare 授权链接并确认；链接和代码会过期，必须使用当次生成的链接。
 
@@ -27,7 +27,7 @@ npm test
 npm run deploy:online
 ```
 
-固定的 Wrangler 4.147.0 支持在部署时为没有 `database_id` 的 DB 绑定自动配置资源。`wrangler.jsonc` 使用数据库名 `astral-cards`、绑定 `DB`、迁移目录 `server/migrations`。首次部署命令完成 Worker 上传后继续执行远程迁移；**迁移成功之前不能宣布应用上线**。不能使用 `--temporary` 预览账号代替需要长期保存数据的正式账号。
+固定的 Wrangler 4.147.0 支持在首次部署时为没有 `database_id` 的 DB 绑定自动配置资源。生产绑定现已记录真实 database_id，后续部署复用这一个数据库，不能删除或替换 ID。`wrangler.jsonc` 使用数据库名 `astral-cards`、绑定 `DB`、迁移目录 `server/migrations`。首次部署命令完成 Worker 上传后继续执行远程迁移；**迁移成功之前不能宣布应用上线**。不能使用 `--temporary` 预览账号代替需要长期保存数据的正式账号。
 
 命令输出一个真实的 `https://astral-cards-online.<账号子域>.workers.dev` 地址。测试该地址：
 

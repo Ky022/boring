@@ -106,3 +106,9 @@ test("hard pity does not downgrade an UR roll", () => {
   s.pity = 49;
   assert.equal(summon(s, 1, () => 0)[0].rarity, "UR");
 });
+import {simulateCombat} from '../src/game.js';
+test('six-person formation is accepted but a seventh hero is rejected',()=>{const s=fresh();for(let id=0;id<7;id++)s.collection[id]=1;applyAction(s,{type:'team',team:[0,1,2,3,4,5]});assert.ok(validSave(s));assert.throws(()=>applyAction(s,{type:'team',team:[0,1,2,3,4,5,6]}));});
+test('combat records enemy retaliation and health loss',()=>{const s=fresh(),r=battle(s,()=>.99);assert.ok(r.events.some(e=>e.side==='e'&&e.damage>0));assert.ok(r.players.some(u=>u.hp<u.maxHp));assert.equal(r.won,true);assert.ok(r.rounds>1&&r.rounds<=20);});
+test('healing and mage area skills occur on the third round',()=>{const r=simulateCombat([{name:'Tank',power:30,role:'骑士',skill:'Guard'},{name:'Healer',power:20,role:'治疗',skill:'Heal'},{name:'Mage',power:20,role:'法师',skill:'Storm'}],[{name:'Foe1',power:40,role:'战士'},{name:'Foe2',power:40,role:'战士'}],()=>.99,true);assert.ok(r.events.some(e=>e.heal>0));const targets=new Set(r.events.filter(e=>e.skill==='Storm').map(e=>e.target));assert.equal(targets.size,2);});
+import {claimIdle,idleReward} from '../src/game.js';
+test('idle income caps at eight hours and cannot be claimed twice',()=>{const s=fresh();s.idleClaimAt=0;s.cleared=2;const reward=claimIdle(s,24*3600000);assert.equal(reward.minutes,480);assert.equal(reward.coins,4320);assert.equal(reward.gems,96);assert.throws(()=>claimIdle(s,24*3600000));assert.equal(idleReward(s,24*3600000+60000).minutes,1);});

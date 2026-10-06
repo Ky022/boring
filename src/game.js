@@ -97,6 +97,7 @@ export function fresh() {
     equipment: {},
     arenaDay: "",
     arenaAttempts: 0,
+    idleClaimAt: Date.now(),
   };
 }
 export function migrate(s) {
@@ -104,7 +105,8 @@ export function migrate(s) {
     const next = { ...fresh(), ...s, version: 2 };
     return validSave(next) ? next : null;
   }
-  return validSave(s) ? s : null;
+  const next=s?.version===2?{...s,idleClaimAt:s.idleClaimAt??Date.now()}:s;
+  return validSave(next) ? next : null;
 }
 export function summon(state, count, rng = Math.random) {
   if (![1, 10].includes(count) || state.gems < count * 150)
@@ -189,24 +191,53 @@ export function equip(state, id, item, slot) {
   if (total <= used) throw new Error("没有空闲装备，请先从其他角色卸下");
   state.equipment[id][g.slot] = item;
 }
+export function idleReward(state,now=Date.now()){
+ const minutes=Math.min(480,Math.floor(Math.max(0,now-(state.idleClaimAt??now))/60000));
+ return {minutes,coins:minutes*(5+state.cleared*2),gems:Math.floor(minutes/5)};
+}
+export function claimIdle(state,now=Date.now()){
+ const reward=idleReward(state,now);if(!reward.minutes)throw new Error('暂时没有放置收益，请至少等待一分钟');
+ state.coins+=reward.coins;state.gems+=reward.gems;state.idleClaimAt=now-((now-state.idleClaimAt)%60000);return reward;
+}
 export function enemyPower(stage) {
   return 45 + stage * 25;
 }
-export function battle(state, rng = Math.random) {
-  if (!state.team.length) throw new Error("请先编成队伍");
-  const dealt = Math.round(teamPower(state) * (0.9 + rng() * 0.2)),
-    target = enemyPower(state.stage),
-    won = dealt >= target;
-  let reward = 0,
-    coins = 0;
-  if (won) {
-    reward = state.stage > state.cleared ? 350 : 60;
-    coins = state.stage > state.cleared ? 350 : 120;
-    state.gems += reward;
-    state.coins += coins;
-    state.cleared = Math.max(state.cleared, state.stage);
+export function simulateCombat(attacking, defending, rng=Math.random, pvp=false) {
+  const players=attacking.map((unit,i)=>({...unit,unitId:'p'+i,maxHp:Math.round(unit.power*4+25),hp:Math.round(unit.power*4+25)}));
+  const enemies=defending.map((unit,i)=>({...unit,unitId:'e'+i,maxHp:Math.round(unit.power*(pvp?4:3)+(pvp?25:15)),hp:Math.round(unit.power*(pvp?4:3)+(pvp?25:15))}));
+  const events=[];
+  const hit=(actor,target,multiplier,skill)=>{const critical=rng()<.15;const raw=Math.round((actor.power*.7+2)*(.9+rng()*.2)*multiplier*(critical?1.5:1));const damage=Math.min(target.hp,Math.max(1,Math.round(raw*(target.role==='骑士'?.78:1))));target.hp-=damage;events.push({actor:actor.unitId,target:target.unitId,damage,hp:target.hp,maxHp:target.maxHp,critical,skill,side:actor.unitId[0]});};
+  let rounds=0;
+  for(let round=1;round<=20;round++){
+    rounds=round;
+    for(const side of [players,enemies]){
+      const opponents=side===players?enemies:players;
+      for(const actor of side){
+        if(actor.hp<=0)continue;
+        const alive=opponents.filter(u=>u.hp>0);if(!alive.length)break;
+        const skillRound=round%3===0;
+        if(skillRound&&actor.role==='治疗'){
+          const ally=side.filter(u=>u.hp>0).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];const heal=Math.min(ally.maxHp-ally.hp,Math.round(actor.power*.9+12));ally.hp+=heal;events.push({actor:actor.unitId,target:ally.unitId,heal,hp:ally.hp,maxHp:ally.maxHp,skill:actor.skill||'恢复之光',side:actor.unitId[0]});
+        }
+        const multiplier=skillRound?(actor.role==='法师'?1.25:actor.role==='战士'?1.6:1.2):1;
+        const targets=skillRound&&actor.role==='法师'?alive:alive.slice(0,1);
+        for(const target of targets)hit(actor,target,multiplier,skillRound?(actor.skill||'蓄力一击'):'普通攻击');
+      }
+      if(!opponents.some(u=>u.hp>0))break;
+    }
+    if(!players.some(u=>u.hp>0)||!enemies.some(u=>u.hp>0))break;
   }
-  return { won, dealt, target, reward, coins };
+  return {won:players.some(u=>u.hp>0)&&!enemies.some(u=>u.hp>0),dealt:events.filter(e=>e.side==='p').reduce((n,e)=>n+(e.damage||0),0),target:enemies.reduce((n,u)=>n+u.maxHp,0),rounds,events,players,enemies};
+}
+export function battle(state,rng=Math.random){
+ if(!state.team.length)throw new Error('请先编成队伍');
+ const attacking=state.team.map(id=>({...heroes[id],power:power(state,id)}));
+ const total=enemyPower(state.stage);
+ const defending=Array.from({length:state.stage%3===0?1:3},(_,i)=>({name:state.stage%3===0?'星境守卫':['荆棘史莱姆','荒林哥布林','石甲卫士'][i],kind:state.stage%3===0?2:i,role:'战士',power:Math.round(total/(state.stage%3===0?1:3)),skill:'荒野重击'}));
+ const result=simulateCombat(attacking,defending,rng);
+ let reward=0,coins=0;
+ if(result.won){reward=state.stage>state.cleared?350:60;coins=state.stage>state.cleared?350:120;state.gems+=reward;state.coins+=coins;state.cleared=Math.max(state.cleared,state.stage);}
+ return {...result,reward,coins};
 }
 export function applyAction(state, action, rng = Math.random) {
   switch (action.type) {
@@ -221,7 +252,7 @@ export function applyAction(state, action, rng = Math.random) {
     case "team":
       if (
         !Array.isArray(action.team) ||
-        action.team.length > 3 ||
+        action.team.length > 6 ||
         new Set(action.team).size !== action.team.length ||
         !action.team.every(
           (id) => Number.isInteger(id) && heroes[id] && state.collection[id],
@@ -239,6 +270,8 @@ export function applyAction(state, action, rng = Math.random) {
         throw new Error("关卡尚未解锁");
       state.stage = action.stage;
       return null;
+    case "idle":
+      return claimIdle(state);
     case "battle":
       return battle(state, rng);
     default:
@@ -276,7 +309,7 @@ export function validSave(s) {
           n > 0,
       ) &&
       Array.isArray(s.team) &&
-      s.team.length <= 3 &&
+      s.team.length <= 6 &&
       new Set(s.team).size === s.team.length &&
       s.team.every(
         (id) => Number.isInteger(id) && heroes[id] && s.collection[id],
@@ -292,7 +325,8 @@ export function validSave(s) {
       typeof s.arenaDay === "string" &&
       Number.isInteger(s.arenaAttempts) &&
       s.arenaAttempts >= 0 &&
-      s.arenaAttempts <= 5
+      s.arenaAttempts <= 5 &&
+      (s.idleClaimAt===undefined||(Number.isSafeInteger(s.idleClaimAt)&&s.idleClaimAt>=0))
     )
   )
     return false;

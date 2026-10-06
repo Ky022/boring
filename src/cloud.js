@@ -115,18 +115,14 @@ export async function signOut() {
   cloud.status = "offline";
 }
 export async function bootCloud() {
+  if (!cloud.base && (location.hostname.endsWith('.workers.dev') || location.port === '8787')) connect(location.origin);
   if (!cloud.base) {
     try {
-      const config = await fetch("./online-config.json").then((r) => r.json());
+      const config = await fetch('./online-config.json').then(r => r.json());
       if (config.apiBase) connect(config.apiBase);
     } catch {}
-    if (
-      !cloud.base &&
-      (location.hostname.endsWith(".workers.dev") || location.port === "8787")
-    )
-      connect(location.origin);
   }
-  cloud.token = cloud.base ? read(sessionKey()) : "";
+  cloud.token = cloud.base ? read(sessionKey()) : '';
   if (cloud.token) return refreshCloud();
   return null;
 }

@@ -13,7 +13,14 @@
     {
       "binding": "DB",
       "database_name": "astral-cards",
+      "database_id": "47e4ef41-35e3-43d9-acdc-0c7ca7973e84",
       "migrations_dir": "server/migrations",
     },
   ],
+  "env": {
+    "local": {
+      "vars": { "ALLOWED_ORIGIN": "https://ky022.github.io" },
+      "d1_databases": [{ "binding": "DB", "database_name": "astral-cards-dev", "migrations_dir": "server/migrations" }]
+    }
+  }
 }

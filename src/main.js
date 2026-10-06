@@ -1,5 +1,5 @@
 import "./style.css";
-import { portrait } from "./art.js";
+import { portrait, sprite, scenery, monster } from "./pixel.js";
 import {
   heroes,
   rarities,
@@ -12,6 +12,7 @@ import {
   upgradeCost,
   gear,
   teamPower,
+  idleReward,
 } from "./game.js";
 import {
   cloud,
@@ -25,7 +26,7 @@ import {
 } from "./cloud.js";
 const key = "astral-cards-v1";
 let state = fresh(),
-  tab = "summon",
+  tab = "home",
   results = [],
   report = null,
   notice = "",
@@ -33,7 +34,7 @@ let state = fresh(),
 try {
   const saved = JSON.parse(localStorage.getItem(key));
   const restored = migrate(saved);
-  if (restored) state = restored;
+  if (restored) {state = restored;if(saved.idleClaimAt===undefined)localStorage.setItem(key,JSON.stringify(state));}
 } catch {
   storageWarning = "浏览器存储不可用，进度可能无法保存。";
 }
@@ -91,7 +92,8 @@ async function run(task) {
 }
 function render() {
   const total = Object.keys(state.collection).length;
-  $.innerHTML = `<header><a class="brand" href="#"><span>✧</span> 星辉召唤 <small>ASTRAL CHRONICLES</small></a><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn ? "♫ 音效开" : "♪ 音效关"}</button><div class="wallet">✦ <b>${state.gems.toLocaleString()}</b><span>星钻</span></div></header><main><div class="account-strip"><button data-tab="account">${cloud.user ? "☁ " + esc(cloud.user.username) + " · 云端账号" : "◉ 游客试玩 · 仅此设备"}</button><span>◈ ${state.coins.toLocaleString()} 金币</span></div><div class="eyebrow">THE STARS ARE CALLING</div><div class="heading"><div><h1>让星光，成为你的力量。</h1><p>召唤命定的伙伴，踏上未知的冒险。</p></div><div class="progress"><b>${total}<span> / ${heroes.length}</span></b><small>已收集角色</small></div></div><nav>${[
+  $.innerHTML = `<header><a class="brand" href="#"><span>✧</span> 星辉小队 <small>PIXEL CHRONICLES</small></a><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn ? "♫ 音效开" : "♪ 音效关"}</button><div class="wallet">✦ <b>${state.gems.toLocaleString()}</b><span>星钻</span></div></header><main><div class="account-strip"><button data-tab="account">${cloud.user ? "☁ " + esc(cloud.user.username) + " · 云端账号" : "◉ 游客试玩 · 仅此设备"}</button><span>◈ ${state.coins.toLocaleString()} 金币</span></div><div class="eyebrow">PIXEL ADVENTURE · 像素冒险纪元</div><div class="heading"><div><h1>星辉小队</h1><p>每一位伙伴，都有自己的冒险故事。</p></div><div class="progress"><b>${total}<span> / ${heroes.length}</span></b><small>已收集角色</small></div></div><nav>${[
+    ["home", "⌂", "主城"],
     ["summon", "✧", "召唤"],
     ["collection", "▦", "角色"],
     ["adventure", "⚔", "冒险"],
@@ -105,7 +107,7 @@ function render() {
     )
     .join(
       "",
-    )}</nav>${storageWarning ? `<p class="notice">${storageWarning}</p>` : ""}${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ""}<section id="content">${tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section><footer>✦ 星辉召唤 · 幻境纪元 <span>${cloud.user ? "账号存档保存在数据库" : "游客进度仅保存在浏览器"} · 无付费抽卡</span></footer></main>`;
+    )}</nav>${storageWarning ? `<p class="notice">${storageWarning}</p>` : ""}${notice ? `<p class="notice" role="status">${esc(notice)}</p>` : ""}<section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section><footer>✦ 星辉召唤 · 幻境纪元 <span>${cloud.user ? "账号存档保存在数据库" : "游客进度仅保存在浏览器"} · 无付费抽卡</span></footer></main>`;
   $.querySelector("#sound-toggle").onclick = () => {
     soundOn = !soundOn;
     render();
@@ -137,8 +139,8 @@ function render() {
           let team = state.team.includes(id)
             ? state.team.filter((x) => x !== id)
             : [...state.team, id];
-          if (team.length > 3)
-            throw new Error("队伍最多 3 人，请先移除一位角色");
+          if (team.length > 6)
+            throw new Error("队伍最多 6 人，请先移除一位角色");
           await dispatch({ type: "team", team });
           notice = "队伍已更新";
         })),
@@ -183,6 +185,7 @@ function render() {
           });
           notice = `${duel.won ? "竞技胜利" : "竞技落败"}：${duel.dealt} vs ${duel.target}，金币 +${duel.coins}，积分 ${duel.ratingDelta > 0 ? "+" : ""}${duel.ratingDelta}`;
           await loadSocial(false);
+          showBattle(duel);
         })),
   );
   const fight = $.querySelector("#fight");
@@ -200,13 +203,15 @@ function render() {
         await dispatch({ type: "stage", stage: state.stage + 1 });
         report = null;
       });
+  const idleButton=$.querySelector('#claim-idle');if(idleButton)idleButton.onclick=()=>run(async()=>{const reward=await dispatch({type:'idle'});notice=`放置收益已领取：金币 +${reward.coins}，星钻 +${reward.gems}`;});
   wireOnline();
 }
+function homeView(){const idle=idleReward(state);return `<div class="town-view"><div class="town-title"><span>✦</span><div><small>CHAPTER ${String(state.stage).padStart(2,'0')}</small><h2>星灯镇 · 冒险者集结</h2></div><span class="weather">☀ 晴</span></div><div class="town-world">${scenery()}<button class="town-building guild" data-tab="social">♜ 公会大厅</button><button class="town-building portal" data-tab="summon">✧ 召唤圣殿</button><button class="town-building forge" data-tab="collection">⚒ 英雄工坊</button><div class="town-party">${state.team.map((id,i)=>`<div class="town-unit" style="--unit:${i}">${sprite(heroes[id])}<span>${heroes[id].name}</span></div>`).join('')}</div><div class="world-firefly f1"></div><div class="world-firefly f2"></div><div class="world-firefly f3"></div></div><div class="town-quest"><div><small>MAIN QUEST · 主线冒险</small><h3>第 ${state.stage} 关 · ${['萤火森林','月影古城','流沙秘境','霜雪之巅'][Math.floor((state.stage-1)/3)]}</h3><p>首次通关 ✦350 + ◈350 · 你的战力 ${teamPower(state)}</p></div><button class="primary" data-tab="adventure">开始冒险 →</button></div></div><div class="idle-panel"><span class="pixel-chest">▣</span><div><h3>冒险者的放置宝箱</h3><p>◈ <b id="idle-coins">${idle.coins}</b> · ✦ <b id="idle-gems">${idle.gems}</b><small>随通关提升收益 · 最多积累 8 小时</small></p></div><button class="primary" id="claim-idle" ${idle.minutes<1?"disabled":""}>领取</button></div><div class="home-shortcuts">${[['summon','✧','英雄召唤','召唤新的伙伴'],['collection','⚔','英雄成长','升级与装备'],['social','♜','公会远征','与朋友共战'],['arena','⚑','竞技对决','挑战玩家阵容']].map(([id,icon,name,text])=>`<button data-tab="${id}"><span>${icon}</span><b>${name}</b><small>${text}</small></button>`).join('')}</div><div class="section-heading"><div><h2>出战阵容</h2><p>六人小队 · 点击阵容位置前往英雄编成</p></div><span class="pill">⚔ ${teamPower(state)}</span></div><div class="formation-board">${Array.from({length:6},(_,i)=>{const h=heroes[state.team[i]];return `<button data-tab="collection" class="formation-slot ${h?'occupied':''}" style="--accent:${h?rarities[h.rarity].color:'#9e987d'}"><small>${i<3?'前排':'后排'} ${i%3+1}</small>${h?sprite(h):'<span class="empty-slot">＋</span>'}<b>${h?h.name:'等待伙伴'}</b><span>${h?'Lv.'+level(state,h.id)+' · '+h.rarity:'点击编成'}</span></button>`;}).join('')}</div>`;}
 function summonView() {
   return `<div class="banner"><div class="banner-copy"><div class="pill">常驻召唤 · 星之祈愿</div><h2>穿越星海<br>与你相遇</h2><p>每一道光芒，都藏着一段新的故事。<br>召唤稀有伙伴，组建你的专属队伍。</p><div class="featured-label">UR · 月光祭司 露米</div></div><div class="banner-art">${portrait(heroes[0])}<div class="art-name">LUMI <span>月光的誓约</span></div></div><div class="banner-particles"><i style="--i:0"></i><i style="--i:1"></i><i style="--i:2"></i><i style="--i:3"></i><i style="--i:4"></i><i style="--i:5"></i><i style="--i:6"></i><i style="--i:7"></i><i style="--i:8"></i><i style="--i:9"></i><i style="--i:10"></i><i style="--i:11"></i><i style="--i:12"></i><i style="--i:13"></i><i style="--i:14"></i><i style="--i:15"></i></div></div><div class="summon-controls"><div><h3>星辉召唤</h3><p>十连至少获得一位 SR 或更高角色</p></div><div class="pull-buttons"><button class="secondary" data-pull="1" ${state.gems < 150 ? "disabled" : ""}>召唤 1 次 <span>✦ 150</span></button><button class="primary" data-pull="10" ${state.gems < 1500 ? "disabled" : ""}>召唤 10 次 <span>✦ 1,500</span></button></div></div><div class="rates"><span>R <b>70%</b></span><span>SR <b>24%</b></span><span>SSR <b>5%</b></span><span>UR <b>1%</b></span><span class="pity">${state.pity} / 50 · 第 50 抽保底 SSR，SSR / UR 会重置计数</span></div>${results.length ? `<h3 class="section-title">你的召唤结果 <small>重复角色自动提升战力，最多提升 10 次</small></h3><div class="cards results">${results.map((h) => card(h, true)).join("")}</div>` : `<h3 class="section-title">星海中的伙伴 <small>等待与你相遇</small></h3><div class="cards">${[heroes[0], heroes[3], heroes[5], heroes[8]].map((h) => card(h)).join("")}</div>`}`;
 }
 function collectionView() {
-  return `<div class="section-heading"><div><h2>伙伴与装备</h2><p>培养等级、搭配武器与饰品，组建最多三人的队伍。</p></div><span class="pill">队伍 ${state.team.length} / 3 · 战力 ${teamPower(state)}</span></div><div class="cards collection">${heroes
+  return `<div class="section-heading"><div><h2>伙伴与装备</h2><p>培养等级、搭配武器与饰品，组建最多六人的队伍。</p></div><span class="pill">队伍 ${state.team.length} / 6 · 战力 ${teamPower(state)}</span></div><div class="cards collection">${heroes
     .filter((h) => state.collection[h.id])
     .sort((a, b) => power(state, b.id) - power(state, a.id))
     .map(
@@ -285,7 +290,7 @@ function adventureView() {
     )
     .join(
       "",
-    )}</div><div class="battle-panel"><div><div class="eyebrow">CHAPTER ${state.stage}</div><h2>第 ${state.stage} 关 · 星境守卫</h2><p>队伍战力 <b>${strength}</b> / 敌方战力 <b>${enemyPower(state.stage)}</b></p><p>战斗为自动结算，伤害会在队伍战力的 90%–110% 之间波动。</p><div class="team-icons">${state.team.map((id) => `<span title="${heroes[id].name}">${portrait(heroes[id])}<b>${heroes[id].name}</b></span>`).join("") || "尚未选择角色"}</div></div><button id="fight" class="primary" ${!state.team.length ? "disabled" : ""}>⚔ 开始挑战</button></div>${report ? `<div class="battle-result ${report.won ? "win" : "loss"}" role="status"><h2>${report.won ? "✦ 挑战成功！" : "挑战失败"}</h2><p>造成 ${report.dealt} 点伤害 / 目标 ${report.target} 点。${report.won ? `获得 ${report.reward} 星钻、${report.coins} 金币。` : "尝试召唤更强的伙伴，或通过重复挑战积攒星钻。"}</p>${report.won && state.stage < 12 ? '<button id="next" class="secondary">前往下一关 →</button>' : ""}${report.won && state.stage === 12 ? "<p>恭喜通关全部星境！你仍然可以继续收集角色。</p>" : ""}</div>` : ""}`;
+    )}</div><div class="battle-panel"><div><div class="eyebrow">CHAPTER ${state.stage}</div><h2>第 ${state.stage} 关 · 星境守卫</h2><p>队伍战力 <b>${strength}</b> / 敌方战力 <b>${enemyPower(state.stage)}</b></p><p>自动回合战斗：每 3 回合释放技能，治疗恢复生命、骑士减伤；20 回合内击败敌方即可获胜。</p><div class="team-icons">${state.team.map((id) => `<span title="${heroes[id].name}">${portrait(heroes[id])}<b>${heroes[id].name}</b></span>`).join("") || "尚未选择角色"}</div></div><button id="fight" class="primary" ${!state.team.length ? "disabled" : ""}>⚔ 开始挑战</button></div>${report ? `<div class="battle-result ${report.won ? "win" : "loss"}" role="status"><h2>${report.won ? "✦ 挑战成功！" : "挑战失败"}</h2><p>造成 ${report.dealt} 点伤害 / 目标 ${report.target} 点。${report.won ? `获得 ${report.reward} 星钻、${report.coins} 金币。` : "尝试召唤更强的伙伴，或通过重复挑战积攒星钻。"}</p>${report.won && state.stage < 12 ? '<button id="next" class="secondary">前往下一关 →</button>' : ""}${report.won && state.stage === 12 ? "<p>恭喜通关全部星境！你仍然可以继续收集角色。</p>" : ""}</div>` : ""}`;
 }
 function accountView() {
   return `<div class="section-heading"><div><h2>旅人账号</h2><p>游客存档保留在此设备；云端账号使用独立存档，注册从初始队伍开始。</p></div><span class="pill">${cloud.user ? "☁ 云端已连接" : "本地试玩模式"}</span></div><div class="online-panel">${cloud.user ? `<h3>${esc(cloud.user.username)}</h3><p>金币、星钻、角色、装备与关卡进度保存在云端数据库。账号可在朋友手机上重新登录。请保管昵称和密码；当前没有邮件找回功能。</p><p>竞技积分 ${cloud.rating} · 存档版本 ${cloud.revision}</p><button class="secondary" id="refresh-cloud">刷新云端存档</button> <button class="secondary" id="logout">退出账号</button>` : `<div class="auth-intro"><span>☁</span><h3>把星光带到每一台设备</h3><p>${cloud.base ? "服务器已配置，注册后即可使用联网功能。" : "当前公开网站仍是游客版本。数据库上线后，连接服务器即可与朋友一起玩。"}</p></div><form id="auth-form"><label>昵称<input name="username" autocomplete="username" minlength="2" maxlength="20" required placeholder="例如：星海旅人"></label><label>密码<input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" required placeholder="至少 8 个字符，请记好"></label><div class="hero-actions"><button class="primary" name="mode" value="login" ${!cloud.base ? "disabled" : ""}>登录</button><button class="secondary" name="mode" value="register" ${!cloud.base ? "disabled" : ""}>注册新账号</button></div></form>`}<details class="connection-settings"><summary>服务器连接设置</summary><p>这里需要已部署的游戏服务器网址。Cloudflare 网站可以直接自动连接。</p><form id="connect-form"><label>游戏服务器 HTTPS 网址<input name="endpoint" type="url" placeholder="https://astral-cards-online.你的账号.workers.dev" value="${esc(cloud.base)}" required></label><button class="secondary">连接并检查</button></form></details></div>`;
@@ -527,6 +532,7 @@ setInterval(async () => {
     if (status) status.textContent = e.message;
   }
 }, 5000);
+setInterval(()=>{if(tab!=='home'||busy)return;const reward=idleReward(state);const coins=$.querySelector('#idle-coins'),gems=$.querySelector('#idle-gems'),button=$.querySelector('#claim-idle');if(coins)coins.textContent=reward.coins;if(gems)gems.textContent=reward.gems;if(button)button.disabled=reward.minutes<1;},60000);
 let soundOn = false,
   audio;
 function tone(freq, duration = 0.15) {
@@ -602,55 +608,16 @@ function showSummon(pulls) {
     m.after(() => reveal(i), reduced ? 0 : 650 + i * 180),
   );
 }
-function showBattle(outcome) {
-  const team = state.team.map((id) => heroes[id]);
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const m = modal(
-    `<div class="battle-cinema"><div class="cinema-heading"><small>CHAPTER ${state.stage} · 星境远征</small><h2>命运交锋</h2></div><div class="combat-arena"><div class="combat-party">${team.map((h, i) => `<div class="combat-hero" data-attacker="${i}">${portrait(h)}<b>${h.name}</b></div>`).join("")}</div><div class="combat-vs">VS</div><div class="combat-enemy">${portrait(heroes[1], true)}<b>星境守卫</b><div class="hp-track"><div class="hp-fill"></div></div><small class="hp-text">${outcome.target} / ${outcome.target}</small><div class="damage-number"></div></div><div class="slash"></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.won ? "VICTORY" : "DEFEAT"}</h2><p>${outcome.won ? `星境突破 · 获得 ${outcome.reward} 星钻` : "未能突破守卫 · 强化伙伴，再次出发"}</p></div><button class="primary" data-close>返回冒险</button></div>`,
-    "战斗演出",
-  );
-  const hit = (i) => {
-    const damage =
-      Math.round((outcome.dealt * (i + 1)) / team.length) -
-      Math.round((outcome.dealt * i) / team.length);
-    const remaining = Math.max(
-      0,
-      outcome.target - Math.round((outcome.dealt * (i + 1)) / team.length),
-    );
-    const el = m.dialog.querySelector(`[data-attacker="${i}"]`);
-    el.classList.add("attacking");
-    const enemy = m.dialog.querySelector(".combat-enemy");
-    enemy.classList.remove("hit");
-    void enemy.offsetWidth;
-    enemy.classList.add("hit");
-    const num = m.dialog.querySelector(".damage-number");
-    num.textContent = "−" + damage;
-    num.classList.remove("pop");
-    void num.offsetWidth;
-    num.classList.add("pop");
-    m.dialog.querySelector(".hp-fill").style.width =
-      (remaining / outcome.target) * 100 + "%";
-    m.dialog.querySelector(".hp-text").textContent =
-      remaining + " / " + outcome.target;
-    m.dialog.querySelector(".combat-log").textContent =
-      team[i].name + "发动星辉一击，造成 " + damage + " 点伤害！";
-    tone(180 + i * 80, 0.2);
-  };
-  team.forEach((_, i) => m.after(() => hit(i), reduced ? 0 : 500 + i * 650));
-  m.after(
-    () => {
-      m.dialog.querySelector(".combat-outcome").hidden = false;
-      m.dialog
-        .querySelector(".combat-outcome")
-        .classList.add(outcome.won ? "victory" : "defeat");
-      m.dialog.querySelector(".combat-log").textContent = outcome.won
-        ? "所有伙伴凯旋归来。"
-        : "守卫依然屹立，新的力量正在等待你。";
-      tone(outcome.won ? 880 : 160, 0.4);
-    },
-    reduced ? 0 : 600 + team.length * 650,
-  );
+function showBattle(outcome){
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const unit=(u,enemy)=>`<div class="combat-unit ${enemy?'enemy-unit':'ally-unit'}" data-unit="${u.unitId}">${enemy&&!outcome.opponent?monster(u.kind||0):sprite(heroes[u.id])}<b>${esc(u.name)}</b><div class="hp-track"><div class="hp-fill"></div></div><small class="unit-hp">${u.maxHp}</small><span class="unit-damage"></span></div>`;
+ const m=modal(`<div class="battle-cinema"><div class="cinema-heading"><small>${outcome.opponent?'ARENA · '+esc(outcome.opponent):'CHAPTER '+state.stage+' · 星境远征'}</small><h2>小队出击</h2></div><div class="combat-arena">${scenery('forest')}<div class="combat-party">${outcome.players.map(u=>unit(u,false)).join('')}</div><div class="combat-enemies">${outcome.enemies.map(u=>unit(u,true)).join('')}</div><span class="round-counter">AUTO · ROUND 1</span></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.won?'VICTORY':'DEFEAT'}</h2><p>${outcome.won?'伙伴们凯旋归来！':'暂时撤退，培养伙伴后再战。'} ${outcome.reward?'✦ +'+outcome.reward+' · ':''}◈ +${outcome.coins}</p></div><button class="primary" data-close>返回${outcome.opponent?'竞技场':'冒险'}</button></div>`,'自动回合战斗');
+ function animate(event,index){const actor=m.dialog.querySelector(`[data-unit="${event.actor}"]`),target=m.dialog.querySelector(`[data-unit="${event.target}"]`);if(!actor||!target)return;actor.classList.remove('attacking');void actor.offsetWidth;actor.classList.add('attacking');target.querySelector('.hp-fill').style.width=Math.max(0,event.hp/event.maxHp*100)+'%';target.querySelector('.unit-hp').textContent=Math.max(0,event.hp);if(event.hp===0)target.classList.add('fallen');const number=target.querySelector('.unit-damage');number.textContent=event.heal?'+'+event.heal:(event.critical?'暴击 ':'')+'−'+event.damage;number.className='unit-damage pop '+(event.heal?'healing':'');const attacker=[...outcome.players,...outcome.enemies].find(u=>u.unitId===event.actor);m.dialog.querySelector('.combat-log').textContent=attacker.name+' · '+event.skill+(event.heal?' 恢复 '+event.heal+' 点生命':' 造成 '+event.damage+' 点伤害');m.dialog.querySelector('.round-counter').textContent='AUTO · '+event.skill;tone(event.heal?660:event.critical?320:220,.08);}
+ const step=Math.min(240,Math.max(65,9000/Math.max(1,outcome.events.length)));
+ outcome.events.forEach((event,i)=>m.after(()=>animate(event,i),reduced?0:350+i*step));
+ m.after(()=>{m.dialog.querySelector('.combat-outcome').hidden=false;m.dialog.querySelector('.combat-outcome').classList.add(outcome.won?'victory':'defeat');m.dialog.querySelector('.round-counter').textContent=outcome.rounds+' ROUNDS · '+(outcome.won?'CLEAR':'FAILED');m.dialog.querySelector('.combat-log').textContent=outcome.won?'战斗结束，伙伴们凯旋。':'战斗结束，强化阵容再来挑战。';tone(outcome.won?880:160,.3);},reduced?0:500+outcome.events.length*step);
 }
+
 render();
 
 bootCloud()

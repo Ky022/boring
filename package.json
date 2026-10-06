@@ -8,9 +8,9 @@
     "build": "vite build",
     "test": "node --test",
     "build:pages": "npm run build && node scripts/build-pages.mjs",
-    "dev:online": "wrangler dev --local --port 8787 --persist-to .wrangler/state",
-    "db:local": "wrangler d1 migrations apply astral-cards --local --persist-to .wrangler/state",
-    "deploy:online": "npm run build && wrangler deploy && wrangler d1 migrations apply DB --remote"
+    "dev:online": "wrangler dev --env local --local --port 8787 --persist-to .wrangler/state",
+    "db:local": "wrangler d1 migrations apply DB --env local --local --persist-to .wrangler/state",
+    "deploy:online": "npm run build && wrangler deploy --env \"\" && wrangler d1 migrations apply DB --remote --env \"\""
   },
   "devDependencies": {
     "vite": "7.3.1",
