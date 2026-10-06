@@ -1,6 +1,6 @@
 # 上线联网版本
 
-目前 GitHub Pages 只提供静态前端。Cloudflare Workers 同时提供网页与 API，D1 提供持久数据库。正式 Worker 现已部署： https://astral-cards-online.astral-cards.workers.dev ，正式 D1 已执行 0001 与 0002 迁移，已有玩家进度保留。手机布局和双浏览器联网功能已在本地真实 D1 验证；公网 HTTPS 接口另行验证。本地数据库与测试账号不属于生产环境。
+目前 GitHub Pages 只提供静态前端。Cloudflare Workers 同时提供网页与 API，D1 提供持久数据库。正式 Worker 现已部署： https://astral-cards-online.astral-cards.workers.dev ，正式 D1 已执行 0001、0002 与 0003 迁移，已有玩家进度保留。手机布局和双浏览器联网功能已在本地真实 D1 验证；公网 HTTPS 接口另行验证。本地数据库与测试账号不属于生产环境。
 
 ## 手机准备
 
@@ -27,7 +27,7 @@ npm test
 npm run deploy:online
 ```
 
-固定的 Wrangler 4.147.0 支持在首次部署时为没有 `database_id` 的 DB 绑定自动配置资源。生产绑定现已记录真实 database_id，后续部署复用这一个数据库，不能删除或替换 ID。`wrangler.jsonc` 使用数据库名 `astral-cards`、绑定 `DB`、迁移目录 `server/migrations`。首次部署命令完成 Worker 上传后继续执行远程迁移；**迁移成功之前不能宣布应用上线**。不能使用 `--temporary` 预览账号代替需要长期保存数据的正式账号。
+固定的 Wrangler 4.147.0 支持在首次部署时为没有 `database_id` 的 DB 绑定自动配置资源。生产绑定现已记录真实 database_id，后续部署复用这一个数据库，不能删除或替换 ID。`wrangler.jsonc` 使用数据库名 `astral-cards`、绑定 `DB`、迁移目录 `server/migrations`。发布命令先执行远程迁移，再上传 Worker；新迁移必须兼容当前线上版本。**迁移成功之前不能宣布应用上线**。不能使用 `--temporary` 预览账号代替需要长期保存数据的正式账号。
 
 命令输出一个真实的 `https://astral-cards-online.<账号子域>.workers.dev` 地址。测试该地址：
 
@@ -36,6 +36,9 @@ npm run deploy:online
 3. 发送公会消息，确认另一人收到；共同攻击 Boss，检查双方的血量一致。
 4. 升级并装备角色，关闭浏览器后重新登录，确认进度保留。
 5. 挑战朋友已保存的队伍，确认竞技记录与每日次数更新。
+6. 双账号申请并接受好友、设置支援角色；借用三次后恢复自己的队伍。
+7. 公会成员共同完成周任务，两人分别领奖；重试与换公会不能重复领奖。
+8. 保存阵容预设、一键装备、挑战精英；重新登录后检查预设、精英首通、支援次数及公会领奖记录。
 
 好友只需使用同一个 Worker 网址并注册各自的游戏账号。Workers 自带域名会自动连接同源 API。
 

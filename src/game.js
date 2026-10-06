@@ -1,3 +1,5 @@
+import { simulateCombat, formationBonuses } from "./combat.js";
+export { simulateCombat, formationBonuses } from "./combat.js";
 export const rarities = {
   R: { rate: 70, color: "#8daac3", power: 24 },
   SR: { rate: 24, color: "#bb8fff", power: 42 },
@@ -65,8 +67,96 @@ export const heroes = [
     "光",
     "水",
   ][id % 12],
+  faction: ["星灯圣域", "焰羽联盟", "暮影议会", "霜潮王庭", "风林旅团"][
+    { 光: 0, 火: 1, 暗: 2, 水: 3, 风: 4 }[
+      ["光", "火", "暗", "水", "风", "暗", "风", "水", "风", "火", "光", "水"][
+        id % 12
+      ]
+    ]
+  ],
   story: `${name}来自${["星灯镇", "熔火山脉", "暮影森林", "霜月海岸"][id % 4]}，为了守护失落的星灯，加入了冒险者小队。`,
 }));
+const skillEffects = {
+  bless: "祝福最低生命队友",
+  burn: "附加两次灼烧",
+  drain: "恢复伤害的45%生命",
+  freeze: "65%概率使一名敌人跳过一次行动",
+  counter: "进入反击姿态",
+  break: "打碎目标护盾",
+  double: "追加65%追击",
+  execute: "锁定生命比例最低敌人",
+  regen: "持续恢复两次",
+  purify: "净化全队灼烧与控制",
+  guard: "为全队额外提供护盾",
+  revive: "复活一位未复活过的伙伴",
+  teamHeal: "治疗全队",
+};
+const skillConfigs = [
+  [["bless"], 1.2],
+  [["burn"], 1.65],
+  [["drain"], 1.3],
+  [["freeze"], 1.15],
+  [["counter"], 1.25],
+  [["break"], 1.35],
+  [["double"], 1.15],
+  [["regen"], 1.1],
+  [["double"], 1.05],
+  [["execute"], 1.75],
+  [["purify"], 1.0],
+  [["counter"], 1.0],
+  [["counter", "guard"], 1.2],
+  [["freeze", "drain"], 1.2],
+  [["revive", "teamHeal"], 0.9],
+  [["chain", "double"], 1.25],
+  [["burn", "break"], 1.6],
+  [["teamHeal", "purify"], 1.0],
+  [["counter", "regen"], 1.1],
+  [["freeze"], 1.35],
+  [["guard", "bless"], 1.05],
+  [["execute", "drain"], 1.45],
+  [["chain"], 1.4],
+  [["double", "burn"], 1.45],
+  [["regen", "purify"], 1.0],
+  [["guard"], 1.15],
+  [["bless", "freeze"], 1.1],
+  [["break", "drain"], 1.6],
+  [["guard", "regen"], 1.0],
+  [["execute", "double"], 1.2],
+  [["burn"], 1.15],
+  [["guard", "break"], 1.0],
+  [["regen"], 1.0],
+  [["break", "chain"], 1.1],
+  [["burn", "execute"], 1.4],
+  [["freeze", "guard"], 1.0],
+  [["drain", "chain"], 1.25],
+  [["teamHeal", "regen"], 0.9],
+];
+for (const h of heroes) {
+  const [effects, multiplier] = skillConfigs[h.id];
+  h.ability = {
+    effects,
+    multiplier,
+    heal: h.id === 14 ? 0.8 : 0.9,
+    shield: h.id === 12 ? 0.85 : 0.65,
+  };
+  h.skillDescription =
+    effects.map((e) => skillEffects[e]).join("；") + "。每三回合释放。";
+}
+export const chapters = [
+  "萤火森林",
+  "月影古城",
+  "流沙秘境",
+  "霜雪之巅",
+  "熔火火山",
+  "潮汐海港",
+  "天空群岛",
+  "暮影城堡",
+  "远古遗迹",
+  "冰晶迷宫",
+  "星渊裂隙",
+  "黎明圣域",
+];
+export const maxStage = 36;
 export const gear = [
   {
     id: "iron",
@@ -142,6 +232,11 @@ export function fresh() {
     stars: {},
     forge: {},
     tower: 0,
+    eliteCleared: [],
+    presets: [null, null, null],
+    supportHero: null,
+    supportDay: "",
+    supportUses: 0,
     daily: {
       day: "",
       summons: 0,
@@ -274,211 +369,71 @@ export function claimIdle(state, now = Date.now()) {
 export function enemyPower(stage) {
   return 45 + stage * 25;
 }
-export function simulateCombat(
-  attacking,
-  defending,
+export function battle(
+  state,
   rng = Math.random,
-  pvp = false,
+  support = null,
+  elite = false,
 ) {
-  const players = attacking.map((unit, i) => ({
-    ...unit,
-    unitId: "p" + i,
-    maxHp: Math.round(unit.power * 4 + 25),
-    hp: Math.round(unit.power * 4 + 25),
-  }));
-  const enemies = defending.map((unit, i) => ({
-    ...unit,
-    unitId: "e" + i,
-    maxHp: Math.round(unit.power * (pvp ? 4 : 3) + (pvp ? 25 : 15)),
-    hp: Math.round(unit.power * (pvp ? 4 : 3) + (pvp ? 25 : 15)),
-  }));
-  const events = [];
-  const advantage = (a, b) =>
-    ({ 火: "风", 风: "水", 水: "火", 光: "暗", 暗: "光" })[a] === b ? 1.25 : 1;
-  const hit = (actor, target, multiplier, skill, round) => {
-    const critical = rng() < 0.15;
-    const elemental = advantage(actor.element, target.element);
-    const raw = Math.round(
-      (actor.power * 0.7 + 2) *
-        (0.9 + rng() * 0.2) *
-        multiplier *
-        (critical ? 1.5 : 1) *
-        elemental,
-    );
-    let damage = Math.max(
-      1,
-      Math.round(raw * (target.role === "骑士" ? 0.78 : 1)),
-    );
-    const absorbed = Math.min(target.shield || 0, damage);
-    target.shield = (target.shield || 0) - absorbed;
-    damage = Math.min(target.hp, damage - absorbed);
-    target.hp -= damage;
-    events.push({
-      round,
-      actor: actor.unitId,
-      target: target.unitId,
-      damage,
-      absorbed,
-      hp: target.hp,
-      maxHp: target.maxHp,
-      critical,
-      advantage: elemental > 1,
-      skill,
-      side: actor.unitId[0],
-    });
-  };
-  let rounds = 0;
-  for (let round = 1; round <= 20; round++) {
-    rounds = round;
-    for (const side of [players, enemies]) {
-      const opponents = side === players ? enemies : players;
-      for (const actor of side) {
-        if (actor.hp <= 0) continue;
-        if (actor.stunned) {
-          actor.stunned = false;
-          events.push({
-            round,
-            actor: actor.unitId,
-            target: actor.unitId,
-            status: "stun",
-            hp: actor.hp,
-            maxHp: actor.maxHp,
-            skill: "控制 · 跳过行动",
-            side: actor.unitId[0],
-          });
-          continue;
-        }
-        const alive = opponents.filter((u) => u.hp > 0);
-        if (!alive.length) break;
-        const skillRound = round % 3 === 0;
-        if (skillRound && actor.role === "骑士") {
-          const amount = Math.round(actor.power * 0.65);
-          for (const ally of side.filter((u) => u.hp > 0)) {
-            ally.shield = amount;
-            events.push({
-              round,
-              actor: actor.unitId,
-              target: ally.unitId,
-              shield: amount,
-              hp: ally.hp,
-              maxHp: ally.maxHp,
-              skill: actor.skill || "守护壁垒",
-              side: actor.unitId[0],
-            });
-          }
-        }
-        if (skillRound && actor.role === "治疗") {
-          const ally = side
-            .filter((u) => u.hp > 0)
-            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
-          const heal = Math.min(
-            ally.maxHp - ally.hp,
-            Math.round(actor.power * 0.9 + 12),
-          );
-          ally.hp += heal;
-          events.push({
-            round,
-            actor: actor.unitId,
-            target: ally.unitId,
-            heal,
-            hp: ally.hp,
-            maxHp: ally.maxHp,
-            skill: actor.skill || "恢复之光",
-            side: actor.unitId[0],
-          });
-        }
-        const multiplier = skillRound
-          ? actor.role === "法师"
-            ? 1.25
-            : actor.role === "战士"
-              ? 1.6
-              : 1.2
-          : 1;
-        const targets =
-          skillRound && actor.role === "法师"
-            ? alive
-            : skillRound && actor.role === "游侠"
-              ? alive.slice(-1)
-              : alive.slice(0, 1);
-        for (const target of targets)
-          hit(
-            actor,
-            target,
-            multiplier,
-            skillRound ? actor.skill || "蓄力一击" : "普通攻击",
-            round,
-          );
-        if (
-          skillRound &&
-          actor.role === "法师" &&
-          alive[0].hp > 0 &&
-          rng() < 0.25
-        ) {
-          alive[0].stunned = true;
-          events.push({
-            round,
-            actor: actor.unitId,
-            target: alive[0].unitId,
-            status: "control",
-            hp: alive[0].hp,
-            maxHp: alive[0].maxHp,
-            skill: "星力束缚",
-            side: actor.unitId[0],
-          });
-        }
-      }
-      if (!opponents.some((u) => u.hp > 0)) break;
-    }
-    if (!players.some((u) => u.hp > 0) || !enemies.some((u) => u.hp > 0)) break;
-  }
-  return {
-    won: players.some((u) => u.hp > 0) && !enemies.some((u) => u.hp > 0),
-    dealt: events
-      .filter((e) => e.side === "p")
-      .reduce((n, e) => n + (e.damage || 0), 0),
-    target: enemies.reduce((n, u) => n + u.maxHp, 0),
-    rounds,
-    events,
-    players,
-    enemies,
-  };
-}
-export function battle(state, rng = Math.random) {
   if (!state.team.length) throw new Error("请先编成队伍");
+  if (elite && state.stage > state.cleared)
+    throw new Error("精英关卡需要先通关主线");
   dailyState(state).battles++;
-  const attacking = state.team.map((id) => ({
-    ...heroes[id],
-    power: power(state, id),
-  }));
-  const total = enemyPower(state.stage);
-  const defending = Array.from(
-    { length: state.stage % 3 === 0 ? 1 : 3 },
-    (_, i) => ({
-      name:
-        state.stage % 3 === 0
-          ? "星境守卫"
-          : ["荆棘史莱姆", "荒林哥布林", "石甲卫士"][i],
-      kind: state.stage % 3 === 0 ? 2 : i,
-      role: "战士",
-      element: ["风", "火", "水"][i],
-      power: Math.round(total / (state.stage % 3 === 0 ? 1 : 3)),
-      skill: "荒野重击",
-    }),
+  const attacking = combatTeam(state, support);
+  const result = simulateCombat(
+    attacking,
+    stageEnemies(state.stage, elite),
+    rng,
   );
-  const result = simulateCombat(attacking, defending, rng);
   let reward = 0,
     coins = 0;
   if (result.won) {
-    reward = state.stage > state.cleared ? 350 : 60;
-    coins = state.stage > state.cleared ? 350 : 120;
+    if (elite) {
+      state.eliteCleared ??= [];
+      const first = !state.eliteCleared.includes(state.stage);
+      reward = first ? 150 : 20;
+      coins = first ? 600 + state.stage * 20 : 180 + state.stage * 10;
+      if (first) state.eliteCleared.push(state.stage);
+    } else {
+      reward = state.stage > state.cleared ? 350 : 60;
+      coins =
+        state.stage > state.cleared
+          ? 350 + Math.max(0, state.stage - 12) * 20
+          : 120 + Math.max(0, state.stage - 12) * 5;
+      state.cleared = Math.max(state.cleared, state.stage);
+    }
     state.gems += reward;
     state.coins += coins;
-    state.cleared = Math.max(state.cleared, state.stage);
   }
-  return { ...result, reward, coins };
+  return {
+    ...result,
+    reward,
+    coins,
+    stage: state.stage,
+    elite,
+    boss: state.stage % 3 === 0,
+  };
 }
-export function applyAction(state, action, rng = Math.random) {
+
+export function applyAction(state, action, rng = Math.random, support = null) {
   switch (action.type) {
+    case "autoEquip":
+      return autoEquip(state);
+    case "presetSave":
+      return savePreset(state, action.slot, action.name);
+    case "presetLoad":
+      return loadPreset(state, action.slot);
+    case "shareHero":
+      if (
+        !Number.isInteger(action.id) ||
+        !heroes[action.id] ||
+        !state.collection[action.id]
+      )
+        throw new Error("尚未拥有角色");
+      state.supportHero = action.id;
+      return { id: action.id };
+    case "elite":
+      return battle(state, rng, support, true);
     case "star":
       return starUp(state, action.id);
     case "forge":
@@ -486,7 +441,7 @@ export function applyAction(state, action, rng = Math.random) {
     case "daily":
       return claimDaily(state, action.task);
     case "tower":
-      return towerBattle(state, rng);
+      return towerBattle(state, rng, support);
     case "summon":
       return summon(state, action.count, rng);
     case "upgrade":
@@ -511,7 +466,7 @@ export function applyAction(state, action, rng = Math.random) {
       if (
         !Number.isInteger(action.stage) ||
         action.stage < 1 ||
-        action.stage > Math.min(12, state.cleared + 1)
+        action.stage > Math.min(maxStage, state.cleared + 1)
       )
         throw new Error("关卡尚未解锁");
       state.stage = action.stage;
@@ -519,7 +474,7 @@ export function applyAction(state, action, rng = Math.random) {
     case "idle":
       return claimIdle(state);
     case "battle":
-      return battle(state, rng);
+      return battle(state, rng, support);
     default:
       throw new Error("操作无效");
   }
@@ -541,11 +496,11 @@ export function validSave(s) {
       s.pity < 50 &&
       Number.isInteger(s.stage) &&
       s.stage >= 1 &&
-      s.stage <= 12 &&
+      s.stage <= maxStage &&
       Number.isInteger(s.cleared) &&
       s.cleared >= 0 &&
-      s.cleared <= 12 &&
-      s.stage <= Math.min(12, s.cleared + 1) &&
+      s.cleared <= maxStage &&
+      s.stage <= Math.min(maxStage, s.cleared + 1) &&
       record(s.collection) &&
       Object.entries(s.collection).every(
         ([id, n]) =>
@@ -590,6 +545,31 @@ export function validSave(s) {
             ["summon", "battle", "upgrade"].includes(k),
           ) &&
           typeof s.daily.signed === "boolean")) &&
+      (s.eliteCleared === undefined ||
+        (Array.isArray(s.eliteCleared) &&
+          new Set(s.eliteCleared).size === s.eliteCleared.length &&
+          s.eliteCleared.every(
+            (n) => Number.isInteger(n) && n >= 1 && n <= s.cleared,
+          ))) &&
+      (s.presets === undefined ||
+        (Array.isArray(s.presets) &&
+          s.presets.length === 3 &&
+          s.presets.every(
+            (p) =>
+              p === null ||
+              (record(p) &&
+                typeof p.name === "string" &&
+                p.name.length <= 12 &&
+                validTeam(s, p.team)),
+          ))) &&
+      (s.supportHero === undefined ||
+        s.supportHero === null ||
+        (Number.isInteger(s.supportHero) && !!s.collection[s.supportHero])) &&
+      (s.supportDay === undefined || typeof s.supportDay === "string") &&
+      (s.supportUses === undefined ||
+        (Number.isInteger(s.supportUses) &&
+          s.supportUses >= 0 &&
+          s.supportUses <= 3)) &&
       record(s.levels) &&
       Object.entries(s.levels).every(
         ([id, n]) =>
@@ -708,13 +688,13 @@ export function forgeUp(state, item) {
   state.forge[item] = n + 1;
   return { name: g.name, level: n + 1 };
 }
-export function towerBattle(state, rng = Math.random) {
+export function towerBattle(state, rng = Math.random, support = null) {
   if (!state.team.length) throw new Error("请先编成队伍");
   if ((state.tower || 0) >= 30) throw new Error("已通关三十层星灯塔");
   const floor = (state.tower || 0) + 1,
     total = 65 + floor * 35;
   const result = simulateCombat(
-    state.team.map((id) => ({ ...heroes[id], power: power(state, id) })),
+    combatTeam(state, support),
     Array.from({ length: 3 }, (_, i) => ({
       name: ["塔影卫兵", "星石守卫", "秘境术士"][i],
       kind: i,
@@ -732,4 +712,149 @@ export function towerBattle(state, rng = Math.random) {
     state.coins += coins;
   }
   return { ...result, reward, coins, floor };
+}
+
+function validTeam(state, team) {
+  return (
+    Array.isArray(team) &&
+    team.length <= 6 &&
+    new Set(team).size === team.length &&
+    team.every(
+      (id) => Number.isInteger(id) && heroes[id] && state.collection[id],
+    )
+  );
+}
+export function autoEquip(state) {
+  if (!state.team.length) throw new Error("请先编成队伍");
+  const counts = {};
+  for (const item of state.inventory) counts[item] = (counts[item] || 0) + 1;
+  const next = structuredClone(state.equipment);
+  for (const [id, slots] of Object.entries(next)) {
+    if (state.team.includes(Number(id))) delete next[id];
+    else for (const item of Object.values(slots)) counts[item]--;
+  }
+  for (const id of state.team) {
+    next[id] = {};
+    for (const slot of ["weapon", "charm"]) {
+      const best = gear
+        .filter((g) => g.slot === slot && counts[g.id] > 0)
+        .sort(
+          (a, b) =>
+            b.bonus +
+            (state.forge?.[b.id] || 0) * 6 -
+            (a.bonus + (state.forge?.[a.id] || 0) * 6),
+        )[0];
+      if (best) {
+        next[id][slot] = best.id;
+        counts[best.id]--;
+      }
+    }
+  }
+  state.equipment = next;
+  return { power: teamPower(state) };
+}
+export function savePreset(state, slot, name) {
+  if (!Number.isInteger(slot) || slot < 0 || slot > 2 || !state.team.length)
+    throw new Error("请选择有效阵容槽并编成队伍");
+  const label = String(name || `阵容 ${slot + 1}`).trim();
+  if (!label || label.length > 12) throw new Error("阵容名称需要1至12字");
+  state.presets ??= [null, null, null];
+  state.presets[slot] = { name: label, team: [...state.team] };
+  return state.presets[slot];
+}
+export function loadPreset(state, slot) {
+  if (
+    !Number.isInteger(slot) ||
+    slot < 0 ||
+    slot > 2 ||
+    !state.presets?.[slot] ||
+    !validTeam(state, state.presets[slot].team)
+  )
+    throw new Error("没有可用的阵容预设");
+  state.team = [...state.presets[slot].team];
+  return { name: state.presets[slot].name };
+}
+export function combatTeam(state, support = null) {
+  const units = state.team.map((id) => ({
+    ...heroes[id],
+    power: power(state, id),
+  }));
+  if (support) {
+    if (units.length === 6) units.pop();
+    units.push({ ...support, support: true });
+  }
+  return units;
+}
+export function stageEnemies(stage, elite = false) {
+  const total = enemyPower(stage) * (elite ? 1.5 : 1),
+    chapter = Math.floor((stage - 1) / 3),
+    boss = stage % 3 === 0;
+  const mechanics = [
+    {
+      name: "荆棘巨树",
+      effects: ["counter"],
+      role: "骑士",
+      element: "风",
+      hint: "巨树释放护盾并反击，试着使用破盾与治疗。",
+    },
+    {
+      name: "暮影领主",
+      effects: ["drain"],
+      role: "战士",
+      element: "暗",
+      hint: "领主会吸血，集中输出尽快击败。",
+    },
+    {
+      name: "砂岩巨像",
+      effects: ["guard", "break"],
+      role: "骑士",
+      element: "火",
+      hint: "巨像保护自己并破盾，水属性输出有优势。",
+    },
+    {
+      name: "寒霜女妖",
+      effects: ["freeze"],
+      role: "法师",
+      element: "水",
+      hint: "女妖群攻并束缚，净化与风属性伙伴可以应对。",
+    },
+    {
+      name: "熔岩暴君",
+      effects: ["burn"],
+      role: "法师",
+      element: "火",
+      hint: "暴君施加灼烧，带净化英雄与水属性输出。",
+    },
+    {
+      name: "深海祭司",
+      effects: ["teamHeal", "regen"],
+      role: "治疗",
+      element: "水",
+      hint: "祭司持续恢复，培养输出或控制打断行动。",
+    },
+  ];
+  const spec = mechanics[chapter % mechanics.length];
+  if (boss)
+    return [
+      {
+        ...spec,
+        kind: 2,
+        power: Math.round(total),
+        skill: spec.name + " · 秘技",
+        ability: { effects: spec.effects, multiplier: 1.35 },
+      },
+    ];
+  return Array.from({ length: 3 }, (_, i) => ({
+    name: elite
+      ? ["精英斥候", "精英守卫", "精英术士"][i]
+      : ["荆棘史莱姆", "荒林哥布林", "石甲卫士"][i],
+    kind: i,
+    role: elite && i === 2 ? "法师" : "战士",
+    element: ["风", "火", "水"][i],
+    power: Math.round(total / 3),
+    skill: elite ? "精英秘术" : "荒野重击",
+    ability: elite
+      ? { effects: i === 2 ? ["burn"] : [], multiplier: 1.3 }
+      : undefined,
+  }));
 }

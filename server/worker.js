@@ -1,4 +1,12 @@
 import {
+  friendsData,
+  friendshipAction,
+  borrowHero,
+  weeklyData,
+  weekKey,
+  weeklyTasks,
+} from "./social.js";
+import {
   fresh,
   migrate,
   applyAction,
@@ -116,6 +124,7 @@ async function guildData(db, id) {
     bossRound: row.boss_round,
     bossMax: 3000 + Math.max(0, row.boss_round - 1) * 1000,
     revision: row.revision,
+    weekly: await weeklyData(db, row.id, id),
     members: members.map((m) => ({
       id: m.id,
       name: m.username,
@@ -225,7 +234,37 @@ async function gameAction(db, user, input) {
     guild = null,
     statements = [],
     ratingDelta = 0;
-  if (action.type === "boss") {
+  let weeklyClaim = null;
+  let support = null;
+  if (action.supportFriend) {
+    if (!["battle", "elite", "tower"].includes(action.type))
+      fail("这个模式不能借用英雄");
+    try {
+      support = await borrowHero(db, user.id, action.supportFriend, state);
+    } catch (e) {
+      fail(e.message, e.status || 400);
+    }
+  }
+  if (action.type === "guildClaim") {
+    const current = await guildData(db, user.id);
+    if (!current) fail("请先加入公会");
+    const task = current.weekly.tasks.find((t) => t.id === action.task);
+    if (
+      !task ||
+      task.claimed ||
+      task.progress < task.goal ||
+      !current.weekly.participated
+    )
+      fail("任务未完成、未参与本周挑战或已经领取");
+    weeklyClaim = {
+      guildId: current.id,
+      week: current.weekly.week,
+      task: task.id,
+    };
+    state.gems += task.gems;
+    state.coins += task.coins;
+    result = { reward: task.gems, coins: task.coins, name: task.name };
+  } else if (action.type === "boss") {
     guild = await guildData(db, user.id);
     if (!guild) fail("请先加入公会");
     if (!state.team.length) fail("请先编成队伍");
@@ -243,13 +282,16 @@ async function gameAction(db, user, input) {
     statements.push(
       stmt(
         db,
-        "UPDATE guilds SET boss_hp=?,boss_round=boss_round+?,revision=revision+1 WHERE id=? AND revision=? AND EXISTS(SELECT 1 FROM players WHERE account_id=? AND revision=?)",
+        "UPDATE guilds SET boss_hp=?,boss_round=boss_round+?,revision=revision+1,last_actor_command=? WHERE id=? AND revision=? AND EXISTS(SELECT 1 FROM players WHERE account_id=? AND revision=?) AND EXISTS(SELECT 1 FROM members WHERE account_id=? AND guild_id=?)",
         hp,
         defeated ? 1 : 0,
+        user.id + ":" + input.requestId,
         guild.id,
         guild.revision,
         user.id,
         p.revision,
+        user.id,
+        guild.id,
       ),
     );
   } else if (action.type === "arena") {
@@ -290,7 +332,7 @@ async function gameAction(db, user, input) {
     };
   } else {
     try {
-      result = applyAction(state, action, random);
+      result = applyAction(state, action, random, support);
     } catch (e) {
       fail(e.message);
     }
@@ -301,8 +343,8 @@ async function gameAction(db, user, input) {
     rating: Math.max(0, p.rating + ratingDelta),
     result,
   };
-  const guard = guild
-    ? " AND EXISTS(SELECT 1 FROM guilds WHERE id=? AND revision=?)"
+  let guard = guild
+    ? " AND EXISTS(SELECT 1 FROM guilds WHERE id=? AND last_actor_command=?)"
     : "";
   const args = [
     JSON.stringify(state),
@@ -312,7 +354,24 @@ async function gameAction(db, user, input) {
     user.id,
     p.revision,
   ];
-  if (guild) args.push(guild.id, guild.revision + 1);
+  if (guild) args.push(guild.id, user.id + ":" + input.requestId);
+  if (weeklyClaim) {
+    guard +=
+      " AND EXISTS(SELECT 1 FROM members WHERE account_id=? AND guild_id=?) AND NOT EXISTS(SELECT 1 FROM guild_claims WHERE account_id=? AND week=? AND task=?)";
+    args.push(
+      user.id,
+      weeklyClaim.guildId,
+      user.id,
+      weeklyClaim.week,
+      weeklyClaim.task,
+    );
+  }
+  if (support) {
+    const [low, high] = [user.id, support.friendId].sort();
+    guard +=
+      " AND EXISTS(SELECT 1 FROM friendships WHERE low_id=? AND high_id=? AND status='accepted')";
+    args.push(low, high);
+  }
   statements.push(
     stmt(
       db,
@@ -341,6 +400,45 @@ async function gameAction(db, user, input) {
         result.damage,
         user.id,
         guild.id,
+        user.id,
+        input.requestId,
+      ),
+    );
+  if (guild) {
+    const week = weekKey();
+    const damage = Math.min(result.damage, guild.bossHp);
+    statements.push(
+      stmt(
+        db,
+        "INSERT INTO guild_weeks(guild_id,week,damage,hits,kills) SELECT ?,?,?,1,? WHERE EXISTS(SELECT 1 FROM commands WHERE account_id=? AND request_id=?) ON CONFLICT(guild_id,week) DO UPDATE SET damage=damage+excluded.damage,hits=hits+1,kills=kills+excluded.kills",
+        guild.id,
+        week,
+        damage,
+        result.defeated ? 1 : 0,
+        user.id,
+        input.requestId,
+      ),
+      stmt(
+        db,
+        "INSERT INTO guild_week_members(guild_id,week,account_id,damage,hits) SELECT ?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM commands WHERE account_id=? AND request_id=?) ON CONFLICT(guild_id,week,account_id) DO UPDATE SET damage=damage+excluded.damage,hits=hits+1",
+        guild.id,
+        week,
+        user.id,
+        damage,
+        user.id,
+        input.requestId,
+      ),
+    );
+  }
+  if (weeklyClaim)
+    statements.push(
+      stmt(
+        db,
+        "INSERT INTO guild_claims(account_id,guild_id,week,task) SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM commands WHERE account_id=? AND request_id=?)",
+        user.id,
+        weeklyClaim.guildId,
+        weeklyClaim.week,
+        weeklyClaim.task,
         user.id,
         input.requestId,
       ),
@@ -374,7 +472,7 @@ async function gameAction(db, user, input) {
     if (existing) return JSON.parse(existing.result_json);
     throw e;
   }
-  if (guild) output.guild = await guildData(db, user.id);
+  if (guild || weeklyClaim) output.guild = await guildData(db, user.id);
   return output;
 }
 async function route(request, env) {
@@ -404,6 +502,22 @@ async function route(request, env) {
   if (method === "POST") await limited(db, "actions:" + user.id, 60);
   if (path === "/api/action" && method === "POST")
     return gameAction(db, user, await body(request));
+  if (path === "/api/friends" && method === "GET")
+    return friendsData(db, user.id);
+  if (
+    [
+      "/api/friends/request",
+      "/api/friends/accept",
+      "/api/friends/remove",
+    ].includes(path) &&
+    method === "POST"
+  ) {
+    try {
+      return await friendshipAction(db, user, path, await body(request));
+    } catch (e) {
+      fail(e.message, e.status || 500);
+    }
+  }
   if (path === "/api/guild" && method === "GET")
     return { guild: await guildData(db, user.id) };
   if (path === "/api/guild/create" && method === "POST") {

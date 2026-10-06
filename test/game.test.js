@@ -127,7 +127,7 @@ test("combat records enemy retaliation and health loss", () => {
 test("healing and mage area skills occur on the third round", () => {
   const r = simulateCombat(
     [
-      { name: "Tank", power: 30, role: "骑士", skill: "Guard" },
+      { name: "Tank", power: 80, role: "骑士", skill: "Guard" },
       { name: "Healer", power: 20, role: "治疗", skill: "Heal" },
       { name: "Mage", power: 20, role: "法师", skill: "Storm" },
     ],
@@ -278,4 +278,175 @@ test("element advantage, knight shield, ranger rear target and control are recor
   );
   assert.ok(r.events.some((e) => e.status === "control"));
   assert.ok(r.events.some((e) => e.status === "stun"));
+});
+import {
+  formationBonuses,
+  autoEquip,
+  savePreset,
+  loadPreset,
+  combatTeam,
+  stageEnemies,
+  maxStage,
+} from "../src/game.js";
+test("three and five faction allies grant distinct formation bonuses", () => {
+  assert.deepEqual(formationBonuses([{ faction: "A" }, { faction: "A" }]), []);
+  assert.equal(
+    formationBonuses(Array.from({ length: 3 }, () => ({ faction: "A" })))[0]
+      .bonus,
+    0.1,
+  );
+  assert.equal(
+    formationBonuses(Array.from({ length: 5 }, () => ({ faction: "A" })))[0]
+      .bonus,
+    0.2,
+  );
+  const withBuff = simulateCombat(
+    Array.from({ length: 3 }, (_, i) => ({
+      name: "ally" + i,
+      power: 20,
+      role: "战士",
+      faction: "A",
+    })),
+    [{ name: "enemy", power: 100, role: "战士" }],
+    () => 0.99,
+  );
+  assert.equal(withBuff.players[0].maxHp, 116);
+  assert.equal(withBuff.synergies[0].faction, "A");
+});
+test("dedicated hero skills cause burn, drain and revival and stats match events", () => {
+  const r = simulateCombat(
+    [
+      {
+        name: "Burner",
+        power: 50,
+        role: "战士",
+        ability: { effects: ["burn", "drain"], multiplier: 1.3 },
+      },
+    ],
+    [{ name: "Tank", power: 60, role: "骑士" }],
+    () => 0.99,
+    true,
+  );
+  assert.ok(r.events.some((e) => e.status === "ignite"));
+  assert.ok(r.events.some((e) => e.status === "burn" && e.damage > 0));
+  assert.ok(r.events.some((e) => e.heal > 0));
+  assert.equal(
+    r.stats[0].damage,
+    r.events
+      .filter((e) => e.actor === "p0")
+      .reduce((n, e) => n + (e.damage || 0), 0),
+  );
+  const revived = simulateCombat(
+    [
+      { name: "Fragile", power: 5, role: "战士" },
+      {
+        name: "Reviver",
+        power: 100,
+        role: "治疗",
+        ability: { effects: ["revive", "teamHeal"] },
+      },
+    ],
+    [{ name: "Enemy", power: 80, role: "战士" }],
+    () => 0.99,
+    true,
+  );
+  assert.ok(revived.events.some((e) => e.revive && e.heal > 0));
+  assert.ok(
+    revived.events.filter((e) => e.revive && e.target === "p0").length <= 1,
+  );
+  assert.doesNotThrow(() => JSON.stringify(r));
+});
+test("counter skills retaliate without infinite chains and failed combat explains formation issues", () => {
+  const r = simulateCombat(
+    [
+      {
+        name: "Knight",
+        power: 60,
+        role: "骑士",
+        ability: { effects: ["counter"] },
+      },
+    ],
+    [
+      {
+        name: "Other knight",
+        power: 60,
+        role: "骑士",
+        ability: { effects: ["counter"] },
+      },
+    ],
+    () => 0.99,
+    true,
+  );
+  assert.ok(r.events.some((e) => e.skill === "守卫反击"));
+  assert.ok(r.events.length < 500);
+  const weak = simulateCombat(
+    [{ name: "Weak", power: 5, role: "战士" }],
+    [{ name: "Boss", power: 300, role: "战士" }],
+    () => 0.99,
+  );
+  assert.equal(weak.won, false);
+  assert.ok(weak.tips.some((t) => t.includes("治疗")));
+  assert.ok(weak.tips.some((t) => t.includes("骑士")));
+});
+test("one-click equipment uses available quantities and protects off-team gear", () => {
+  const s = fresh();
+  s.collection[11] = 1;
+  s.inventory = ["iron", "moon", "charm", "crown"];
+  s.equipment = { 11: { weapon: "moon" } };
+  autoEquip(s);
+  assert.equal(s.equipment[11].weapon, "moon");
+  assert.equal(s.equipment[8].weapon, "iron");
+  assert.equal(s.equipment[8].charm, "crown");
+  assert.equal(s.equipment[9].charm, "charm");
+  assert.ok(validSave(s));
+});
+test("three named formation presets are copies, validate ownership and survive migration", () => {
+  const s = fresh();
+  savePreset(s, 0, "攻坚");
+  s.team = [10, 9, 8];
+  assert.deepEqual(s.presets[0].team, [8, 9, 10]);
+  loadPreset(s, 0);
+  assert.deepEqual(s.team, [8, 9, 10]);
+  assert.throws(() => savePreset(s, 3, "bad"));
+  assert.throws(() => loadPreset(s, 1));
+  assert.ok(
+    !validSave({ ...s, presets: [{ name: "Forged", team: [0] }, null, null] }),
+  );
+  const restored = migrate(JSON.parse(JSON.stringify(s)));
+  assert.equal(restored.presets[0].name, "攻坚");
+});
+test("new chapters preserve legacy progress and elite rewards distinguish first clear", () => {
+  const s = fresh();
+  s.cleared = 12;
+  applyAction(s, { type: "stage", stage: 13 });
+  assert.ok(validSave(s));
+  assert.equal(maxStage, 36);
+  assert.throws(() => applyAction(s, { type: "stage", stage: 36 }));
+  assert.throws(() => applyAction(s, { type: "elite" }));
+  s.cleared = 13;
+  s.collection[0] = 1;
+  s.team = [0];
+  s.levels[0] = 50;
+  const first = applyAction(s, { type: "elite" }, () => 0.99);
+  assert.equal(first.won, true);
+  assert.equal(first.reward, 150);
+  assert.equal(applyAction(s, { type: "elite" }, () => 0.99).reward, 20);
+  assert.deepEqual(s.eliteCleared, [13]);
+  assert.ok(validSave(s));
+  assert.notEqual(
+    stageEnemies(3)[0].ability.effects[0],
+    stageEnemies(6)[0].ability.effects[0],
+  );
+});
+test("support combat adds or replaces one hero without modifying permanent ownership", () => {
+  const s = fresh(),
+    support = { ...heroes[0], power: 100 };
+  assert.equal(combatTeam(s, support).length, 4);
+  assert.deepEqual(s.team, [8, 9, 10]);
+  s.collection = { ...s.collection, 0: 1, 1: 1, 2: 1 };
+  s.team = [0, 1, 2, 8, 9, 10];
+  const units = combatTeam(s, support);
+  assert.equal(units.length, 6);
+  assert.equal(units[5].support, true);
+  assert.deepEqual(s.team, [0, 1, 2, 8, 9, 10]);
 });

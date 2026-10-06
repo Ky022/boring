@@ -3192,3 +3192,279 @@ footer span {
   color: #c3c9b3;
   font-size: 12px;
 }
+/* Chapter maps, formations, community and combat reports */
+.preset-board,
+.friends-panel,
+.weekly-panel,
+.elite-panel,
+.synergy-panel,
+.support-picker {
+  margin: 14px 0;
+  padding: 14px;
+  background: #243c3e;
+  border: 1px solid #ac9665;
+  border-radius: 10px;
+}
+.synergy-panel {
+  background: #304644;
+  border-color: #bdad73;
+}
+.synergy-panel p,
+.support-picker p,
+.preset-board > p,
+.weekly-panel > p {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #c9ceb9;
+}
+.preset-grid {
+  display: grid;
+  gap: 8px;
+}
+.preset-grid form {
+  padding: 10px;
+  background: #1c3135;
+  border-radius: 7px;
+}
+.preset-grid form > div {
+  display: flex;
+  gap: 6px;
+}
+.preset-grid form > div button {
+  flex: 1;
+  font-size: 12px;
+}
+.preset-grid small {
+  display: block;
+  padding: 6px 0;
+  color: #b6c2b4;
+}
+.preset-grid input,
+.roster-tools select,
+.chapter-picker select,
+.support-picker select {
+  width: 100%;
+  max-width: 100%;
+  color: #e5dfc7;
+  background: #152d31;
+  border: 1px solid #998962;
+  border-radius: 6px;
+  padding: 10px;
+  min-width: 0;
+}
+.roster-tools {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+.roster-tools label {
+  flex: 1;
+  font-size: 12px;
+  color: #d3d1b5;
+}
+.chapter-picker {
+  display: block;
+  margin: 12px 0;
+  color: #d3d1b5;
+}
+.chapter-map {
+  position: relative;
+  border: 2px solid #a48f60;
+  overflow: hidden;
+  min-height: 175px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+.chapter-map > .pixel-scene {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  opacity: 0.65;
+}
+.chapter-map .stages {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 25px 12px;
+  margin: 0;
+}
+.chapter-map .stage {
+  min-height: 108px;
+  background: #173034dc;
+  border: 2px solid #a58f67;
+}
+.chapter-map .stage.current {
+  border-color: #ffe2a0;
+  box-shadow: 0 0 18px #ffe2a044;
+}
+.chapter-map .stage:disabled {
+  opacity: 0.6;
+}
+.elite-panel {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+.elite-panel p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.growth-preview {
+  padding: 14px;
+  background: #304c43;
+  border: 1px solid #baa273;
+  border-radius: 8px;
+  color: #d8d4b9;
+}
+.growth-preview b,
+.growth-preview span {
+  color: #b0e2a6;
+}
+.skill-description {
+  padding: 12px;
+  background: #18343a;
+  border-radius: 7px;
+}
+.friends-panel form {
+  display: flex;
+  gap: 8px;
+}
+.friends-panel form input {
+  flex: 1;
+  min-width: 0;
+}
+.friends-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.friend-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: #183139;
+  border-radius: 8px;
+}
+.friend-portrait {
+  width: 62px;
+  flex-shrink: 0;
+}
+.friend-card > div:last-child {
+  min-width: 0;
+  flex: 1;
+}
+.friend-card small {
+  display: block;
+  color: #bcc8b7;
+  margin-top: 4px;
+}
+.friend-card p {
+  font-size: 12px;
+}
+.friend-card button {
+  font-size: 12px;
+  padding: 8px;
+}
+.weekly-panel h3 {
+  color: #dfc78f;
+}
+.combat-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.combat-controls button {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+.combat-controls > span {
+  font-size: 12px;
+  color: #b9c4b4;
+}
+.combat-stats {
+  text-align: left;
+  margin-top: 16px;
+}
+.combat-stat-row {
+  padding: 10px 0;
+  border-bottom: 1px solid #a1946a44;
+}
+.combat-stat-row span,
+.combat-stat-row small {
+  display: block;
+  color: #c8ccb9;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.stat-bar {
+  height: 6px;
+  background: #152b31;
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 7px 0;
+}
+.stat-bar i {
+  height: 100%;
+  display: block;
+  background: linear-gradient(90deg, #88b9a5, #e0c488);
+}
+.combat-stats details {
+  margin: 14px 0;
+}
+.battle-advice {
+  padding: 12px;
+  background: #403831;
+  border-radius: 8px;
+}
+.battle-advice ul {
+  padding-left: 20px;
+}
+.battle-advice li {
+  font-size: 13px;
+  line-height: 1.8;
+}
+.combat-cinema .combat-outcome {
+  max-height: none;
+}
+@media (max-width: 360px) {
+  .chapter-map .stages {
+    gap: 5px;
+    padding: 25px 6px;
+  }
+  .chapter-map .stage {
+    padding: 8px 3px;
+  }
+  .chapter-map .stage b {
+    font-size: 12px;
+  }
+  .elite-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .friends-panel form {
+    flex-wrap: wrap;
+  }
+  .friend-card {
+    gap: 8px;
+  }
+  .roster-tools {
+    gap: 6px;
+  }
+}
+.combat-unit b {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.combat-unit b,
+.combat-unit .unit-hp {
+  pointer-events: none;
+}
