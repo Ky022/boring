@@ -98,3 +98,28 @@
 .battle-fullscreen .cinema-heading small { font-size:8px; }
 .battle-fullscreen .combat-controls { margin:7px 0; }
 .battle-fullscreen .unit-hp { color:#62513c; text-shadow:0 1px #fff2d1; }
+.formation-selection { display:flex; justify-content:space-between; align-items:center; flex:none; min-height:19px; padding:3px 8px; background:#665343; color:#fff0ca; font-size:9px; border-bottom:1px solid #bfa16f; }
+.formation-selection span { color:#e0cbae; font-size:8px; }
+@media(max-height:740px) { .battle-fullscreen .combat-unit .hero-art { width:62px; height:62px !important; }.battle-fullscreen .combat-arena { padding-top:35px; padding-bottom:15px; }.battle-fullscreen .combat-enemies { margin-top:0; } }
+@media(max-height:620px) { #app .reference-formation .formation-scene { min-height:170px; } #app .reference-formation .inline-formation-picker { height:145px; } .reference-formation .formation-bottom { height:43px; } #app .reference-formation .formation-slots .pixel-character,.reference-formation .formation-opponents .monster { width:46px; height:43px !important; }.reference-formation .formation-vs { height:30px; }.reference-formation .formation-vs > b { height:35px; font-size:16px; padding-top:5px; } #app .reference-formation .formation-slots,.reference-formation .formation-opponents { top:33px; } .battle-fullscreen .combat-unit .hero-art { height:52px !important; width:54px; } }
+/* Playful mobile game finish: brighter plaques and softer shapes. */
+#app:not(.hero-detail-open) > .game-hud { background:linear-gradient(#766985,#48405e); border-bottom:3px solid #dfc188; }
+#app .game-dock { background:linear-gradient(#917b85,#5d4c66); border-top:3px solid #dac19a; }
+#app .game-dock button.active { background:linear-gradient(#f8c578,#c98b51); border-radius:6px 6px 0 0; }
+#app .fullscreen-town .scene-building b { background:linear-gradient(#6f586d,#453950); border:2px solid #e1c894; border-radius:6px; box-shadow:0 3px 0 #3d2e3d90; font-size:12px; padding:3px 12px; font-weight:800; }
+.sanctum-growth-banner { background:linear-gradient(100deg,#9666b8ed,#61458be0); border:2px solid #efcf89; border-radius:9px; }
+.sanctum-growth-banner b { color:#fff0b4; font-weight:800; }.sanctum-growth-banner small { color:#f1dfed; }
+.fullscreen-town .town-quest-float { background:linear-gradient(90deg,#735d79e8,#5b4c73e8); border-radius:8px; border:2px solid #ead096; }
+#app .town-quest-float .primary,.formation-bottom > .primary { border-radius:7px; background:linear-gradient(#ffe8a0,#f1bc60); color:#815327; }
+.town-side-tools .painted-icon { filter:drop-shadow(0 2px 1px #31233e80) drop-shadow(0 0 3px #fff0b955); }
+.reference-formation .formation-vs { background:linear-gradient(90deg,#4e8295e8,#655376ee,#a66879e8); }
+.reference-formation .formation-vs > b { background:#df664e; }
+.formation-selection { background:#9a795c; color:#fff5d7; }.formation-selection span { color:#fff0d0; }
+.formation-power span { background:linear-gradient(90deg,#c87664,#d4917a90); }.formation-power span:last-child { background:linear-gradient(270deg,#c87664,#d4917a90); }
+#app .reference-formation .formation-card { border-radius:5px; background:radial-gradient(#f4e2ae,#be9f76); }
+#app:not(.hero-detail-open) .home-drawer,#app:not(.hero-detail-open) .reward-entry,#app:not(.hero-detail-open) .dungeon-card { border-radius:9px; }
+.world-banner .banner-scrim { background:linear-gradient(transparent,#574777b0); }.world-banner-title { text-shadow:0 2px 0 #514166; }
+#app .fullscreen-town .scene-building.primary-building { height:34%; }
+.fullscreen-town .street-party { bottom:24%; }
+@media(max-height:740px) { .fullscreen-town .street-party { bottom:24%; } }
+.fullscreen-town .world-scene img { object-fit:fill; }
