@@ -16,6 +16,9 @@ import {
 } from "./progression.js";
 import { heroes, level, power, formationBonuses, combatTeam } from "./game.js";
 import { sprite, scenery, pixelCharacter } from "./pixel.js";
+import { worldScene, screenBanner, rewardTiles } from "./world-ui.js";
+import { gameIcon } from "./hero-ui.js";
+let formationPosition = null, formationRole = "全部";
 export function illustration(h, small = false) {
   if (small) return pixelCharacter(h, 'hero-illustration art-avatar');
   if ([0, 8, 9, 10].includes(h.id)) {
@@ -54,24 +57,24 @@ export function formationView(s, nav) {
   if (!roles.includes("治疗")) advice.push("建议加入治疗提高续航");
   if (s.team.length < 6) advice.push(`还有 ${6 - s.team.length} 个空位`);
   const synergies = formationBonuses(combatTeam(s));
-  return `<div class="formation-screen revamped-formation">${nav}<div class="formation-scene">${scenery("forest")}<div class="formation-heading"><small>FORMATION</small><h2>出征小队</h2><span>战力 ${s.team.reduce((n, id) => n + power(s, id), 0)}</span></div><div class="formation-slots">${Array.from(
+  return `<div class="formation-screen revamped-formation">${nav}<div class="formation-scene">${worldScene("battle-forest")}<div class="formation-heading"><small>FORMATION</small><h2>出征小队</h2><span>战力 ${s.team.reduce((n, id) => n + power(s, id), 0)}</span></div><div class="formation-slots">${Array.from(
     { length: 6 },
     (_, i) => {
       const h = heroes[formationPositions(s)[i]];
-      return `<button data-position="${i}"><small>${i < 3 ? "前排" : "后排"} ${(i % 3) + 1}</small>${h ? sprite(h) : "<span>＋</span>"}<b>${h ? h.name : "选择英雄"}</b><em>${h ? `Lv.${level(s, h.id)} · ${h.role}` : "点击上阵"}</em></button>`;
+      return `<button data-position="${i}" class="${i === (formationPosition ?? formationPositions(s).indexOf(null)) ? "chosen-position" : ""}"><small>${i < 3 ? "前排" : "后排"} ${(i % 3) + 1}</small>${h ? sprite(h) : "<span>＋</span>"}<b>${h ? h.name : "选择英雄"}</b><em>${h ? `Lv.${level(s, h.id)} · ${h.role}` : "点击上阵"}</em></button>`;
     },
   ).join(
     "",
-  )}</div></div><div class="screen-panel"><div class="formation-actions"><button class="primary" data-recommend>推荐阵容</button><button class="secondary" data-loadout-auto>一键穿戴</button></div><p class="team-advice">${advice.join(" · ") || "前排与治疗齐备，可按关卡调整输出。"}</p><div class="synergy-chips">${synergies.map((b) => `<span>${b.faction} · 攻击/生命 +${b.bonus * 100}%</span>`).join("") || "<span>同阵营 3 位 / 5 位触发共鸣</span>"}</div><details class="preset-details"><summary>保存与载入阵容</summary><div id="preset-mount"></div></details><button class="primary" data-tab="adventure">前往冒险 →</button></div></div>`;
+  )}</div></div><div class="screen-panel"><div class="formation-actions"><button class="primary" data-recommend>推荐阵容</button><button class="secondary" data-loadout-auto>一键穿戴</button></div><p class="team-advice">${advice.join(" · ") || "前排与治疗齐备，可按关卡调整输出。"}</p><div class="synergy-chips">${synergies.map((b) => `<span>${b.faction} · 攻击/生命 +${b.bonus * 100}%</span>`).join("") || "<span>同阵营 3 位 / 5 位触发共鸣</span>"}</div><details class="preset-details"><summary>保存与载入阵容</summary><div id="preset-mount"></div></details><button class="primary" data-tab="adventure">前往冒险 →</button></div><section class="inline-formation-picker"><div class="inline-picker-heading"><b>点击站位，再选择英雄</b><select data-inline-role aria-label="组队职业筛选">${["全部","骑士","战士","游侠","法师","治疗"].map(r=>`<option ${formationRole===r?"selected":""}>${r}</option>`).join("")}</select><button data-inline-clear class="secondary">卸下选中位置</button></div><div class="inline-formation-roster">${heroes.filter(h=>s.collection[h.id]&&(formationRole==="全部"||h.role===formationRole)).sort((a,b)=>power(s,b.id)-power(s,a.id)).map(h=>`<button data-pick="${h.id}" class="formation-card ${s.team.includes(h.id)?"deployed":""}" style="--rarity:${{R:"#a2afb6",SR:"#b39ac8",SSR:"#d8b16f",UR:"#df9cba"}[h.rarity]}"><small>Lv.${level(s,h.id)}</small>${sprite(h)}<b>${h.name}</b><em>${h.role} · ${power(s,h.id)}</em>${s.team.includes(h.id)?"<span>上阵中</span>":""}</button>`).join("")}</div></section></div>`;
 }
 export function forgeView(s, nav, id) {
-  return `<div class="forge-screen revamped-forge">${nav}<div class="forge-banner"><small>STAR FORGE</small><h2>星灯锻造所</h2><p>强化石 ${s.stones} · 装备 ${s.items.length} 件</p></div><div class="screen-panel"><button class="primary" data-equip="${id}">查看 ${heroes[id].name} 的六部位装备</button><details class="equipment-shop" open><summary>基础装备商店 · 每件 ◈300</summary><div class="shop-slots">${slots.map((slot) => `<button data-item-buy="${slot}">${itemIcon({ slot, quality: 0 })}<small>${slotNames[slot]}</small></button>`).join("")}</div></details><h3>装备背包</h3><button class="secondary" data-salvage-common>批量分解未穿戴、未强化的普通装备</button><p class="muted">副本与主线可获得更高品质；穿戴中或锁定装备不可分解。</p><div class="equipment-bag">${
+  return `<div class="forge-screen revamped-forge world-forge" data-panel="bag">${nav}${screenBanner("星灯锻造所",`强化石 ${s.stones} · 装备 ${s.items.length} 件`,"shield","town-east")}<div class="forge-panel-tabs"><button data-forge-panel="bag" class="active">装备背包</button><button data-forge-panel="shop">基础商店</button></div><div class="screen-panel"><button class="primary" data-equip="${id}">查看 ${heroes[id].name} 的六部位装备</button><details class="equipment-shop" open><summary>基础装备商店 · 每件 ◈300</summary><div class="shop-slots">${slots.map((slot) => `<button data-item-buy="${slot}">${itemIcon({ slot, quality: 0 })}<b>${slotNames[slot]}</b><small>金币 300</small><span>购买</span></button>`).join("")}</div></details><div class="bag-toolbar"><select data-bag-filter aria-label="装备部位筛选"><option value="all">全部部位</option>${slots.map(k=>`<option value="${k}">${slotNames[k]}</option>`).join("")}</select><select data-quality-filter aria-label="装备品质筛选"><option value="all">全部品质</option>${qualities.map((q,i)=>`<option value="${i}">${q}</option>`).join("")}</select></div><button class="secondary" data-salvage-common>批量分解未穿戴、未强化的普通装备</button><p class="muted">副本与主线可获得更高品质；穿戴中或锁定装备不可分解。</p><div class="equipment-bag">${
     s.items
       .map((i) => {
         const owner = Object.entries(s.loadouts).find(([, l]) =>
           Object.values(l).includes(i.id),
         );
-        return `<article class="equipment-card q${i.quality}">${itemIcon(i)}<div><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${slotNames[i.slot]} · 战力 +${itemPower(i)}</small><small>${itemStatText(i)}<br>${sets[i.set]}套装 · ${owner ? heroes[+owner[0]].name + "穿戴中" : "未穿戴"}</small></div><div class="item-actions"><button data-item-action="itemForge" data-item-id="${i.id}" ${i.level >= 10 ? "disabled" : ""}>强化</button><button data-item-action="itemLock" data-item-id="${i.id}">${i.locked ? "解锁" : "锁定"}</button><button data-item-action="itemSalvage" data-item-id="${i.id}" ${owner || i.locked ? "disabled" : ""}>分解</button></div></article>`;
+        return `<article class="equipment-card q${i.quality}" data-slot="${i.slot}" data-quality="${i.quality}"><div class="bag-item-art">${itemIcon(i)}<b>+${i.level}</b>${i.locked?"<span>锁定</span>":""}</div><b class="bag-item-name">${i.name}</b><small>${qualities[i.quality]} · ${slotNames[i.slot]}</small><details class="bag-item-details"><summary>属性 / 强化</summary><div><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${slotNames[i.slot]} · 战力 +${itemPower(i)}</small><small>${itemStatText(i)}<br>${sets[i.set]}套装 · ${owner ? heroes[+owner[0]].name + "穿戴中" : "未穿戴"}</small></div><div class="item-actions"><button data-item-action="itemForge" data-item-id="${i.id}" ${i.level >= 10 ? "disabled" : ""}>强化</button><button data-item-action="itemLock" data-item-id="${i.id}">${i.locked ? "解锁" : "锁定"}</button><button data-item-action="itemSalvage" data-item-id="${i.id}" ${owner || i.locked ? "disabled" : ""}>分解</button></div></details></article>`;
       })
       .join("") ||
     '<div class="empty-state">还没有装备<br>前往遗落兵工厂获取，或购买基础装备。</div>'
@@ -79,7 +82,7 @@ export function forgeView(s, nav, id) {
 }
 export function dungeonView(s) {
   const d = dungeonState(s);
-  return `<section class="dungeon-board"><div class="section-heading"><div><small>DAILY EXPEDITIONS</small><h2>日常副本</h2><p>每种每日 3 次奖励 · 通关后可扫荡</p></div></div>${dungeons.map((v) => `<article class="dungeon-card" style="--accent:${v.color}"><div class="dungeon-emblem">${v.icon}</div><div><h3>${v.name}</h3><p>${v.description}</p><small>剩余 ${3 - (d.runs[v.id] || 0)} 次 · 马来西亚早上 8 点刷新</small></div><select data-dungeon-tier="${v.id}" aria-label="${v.name}难度">${[1, 2, 3].map((t) => `<option value="${t}" ${s.cleared < (t - 1) * 6 ? "disabled" : ""}>${["普通", "困难", "大师"][t - 1]}${t > 1 ? ` · 通关${(t - 1) * 6}关` : ""}</option>`).join("")}</select><div class="dungeon-actions"><button class="primary" data-dungeon="${v.id}" ${d.runs[v.id] >= 3 ? "disabled" : ""}>挑战</button><button class="secondary" data-dungeon="${v.id}" data-sweep="true" ${!d.cleared[v.id] || d.runs[v.id] >= 3 ? "disabled" : ""}>扫荡</button></div></article>`).join("")}</section>`;
+  return `<section class="dungeon-board">${screenBanner("日常远征","每日获取金币、经验、装备与材料","adventure","town-east")}<div class="section-heading"><div><small>DAILY EXPEDITIONS</small><h2>日常副本</h2><p>每种每日 3 次奖励 · 通关后可扫荡</p></div></div>${dungeons.map((v) => `<article class="dungeon-card" style="--accent:${v.color}"><div class="dungeon-emblem">${gameIcon({gold:"star",xp:"water",equipment:"shield",materials:"book"}[v.id]||"adventure")}</div><div><h3>${v.name}</h3><p>${v.description}</p><small>剩余 ${3 - (d.runs[v.id] || 0)} 次 · 马来西亚早上 8 点刷新</small></div><select data-dungeon-tier="${v.id}" aria-label="${v.name}难度">${[1, 2, 3].map((t) => `<option value="${t}" ${s.cleared < (t - 1) * 6 ? "disabled" : ""}>${["普通", "困难", "大师"][t - 1]}${t > 1 ? ` · 通关${(t - 1) * 6}关` : ""}</option>`).join("")}</select><div class="dungeon-actions"><button class="primary" data-dungeon="${v.id}" ${d.runs[v.id] >= 3 ? "disabled" : ""}>挑战</button><button class="secondary" data-dungeon="${v.id}" data-sweep="true" ${!d.cleared[v.id] || d.runs[v.id] >= 3 ? "disabled" : ""}>扫荡</button></div></article>`).join("")}</section>`;
 }
 export function welfareView(s, mode) {
   const w = s.welfare,
@@ -100,7 +103,7 @@ export function welfareView(s, mode) {
     return `${nav}<h2>冒险者邮箱</h2>${mailbox(s)
       .map(
         (m) =>
-          `<article class="reward-entry"><h3>${m.title}</h3><p>${m.text}</p><b>${rewardText(m.reward)}</b><small>到期：${new Date(m.expires).toLocaleDateString("zh-CN")}</small><button class="primary" data-mail="${m.id}" ${m.claimed || m.expired ? "disabled" : ""}>${m.claimed ? "已领取" : m.expired ? "已过期" : "领取附件"}</button></article>`,
+          `<article class="reward-entry"><h3>${m.title}</h3><p>${m.text}</p>${rewardTiles(m.reward)}<small>到期：${new Date(m.expires).toLocaleDateString("zh-CN")}</small><button class="primary" data-mail="${m.id}" ${m.claimed || m.expired ? "disabled" : ""}>${m.claimed ? "已领取" : m.expired ? "已过期" : "领取附件"}</button></article>`,
       )
       .join("")}`;
   if (mode === "achievements")
@@ -108,15 +111,15 @@ export function welfareView(s, mode) {
       .map((a) => {
         const n = achievementProgress(s, a),
           claimed = w.achievements.includes(a.id);
-        return `<article class="reward-entry"><h3>${a.name}</h3><progress value="${n}" max="${a.goal}"></progress><small>${Math.min(n, a.goal)} / ${a.goal}</small><p>${rewardText(a.reward)}</p>${btn("achievement", a.id, claimed || n < a.goal, claimed ? "已领取" : "领取")}</article>`;
+        return `<article class="reward-entry"><h3>${a.name}</h3><progress value="${n}" max="${a.goal}"></progress><small>${Math.min(n, a.goal)} / ${a.goal}</small>${rewardTiles(a.reward)}${btn("achievement", a.id, claimed || n < a.goal, claimed ? "已领取" : "领取")}</article>`;
       })
       .join("")}`;
-  return `${nav}<h2>每日福利</h2><div class="signin-calendar">${[1, 2, 3, 4, 5, 6, 7].map((n) => `<div class="${w.streak >= n ? "signed" : ""}"><small>第 ${n} 天</small><b>${n === 7 ? "✦500" : "✧"}</b><span>${n === 7 ? "3 张券" : "1 张券"}</span></div>`).join("")}</div><p>连续签到七日大奖；断签重新开始，下一轮可继续领取。</p>${btn("streak", undefined, w.lastSign === today, w.lastSign === today ? "今日已签到" : "签到领奖")}<article class="reward-entry"><h3>免费每日补给</h3><p>召唤券 ×1 · 金币 ×300 · 强化石 ×3</p>${btn("free", undefined, w.freeDay === today, w.freeDay === today ? "已领取" : "免费领取")}</article><h3>新手七日成长</h3>${newcomerTasks(
+  return `${nav}<h2>每日福利</h2><div class="signin-calendar">${[1, 2, 3, 4, 5, 6, 7].map((n) => `<div class="${w.streak >= n ? "signed" : ""}"><small>第 ${n} 天</small>${gameIcon(n===7?"summon":"mail")}<b>${n===7?"星钻 500":"召唤券"}</b><span>${n === 7 ? "3 张券" : "×1"}</span></div>`).join("")}</div><p>连续签到七日大奖；断签重新开始，下一轮可继续领取。</p>${btn("streak", undefined, w.lastSign === today, w.lastSign === today ? "今日已签到" : "签到领奖")}<article class="reward-entry"><h3>免费每日补给</h3>${rewardTiles({tickets:1,coins:300,stones:3})}${btn("free", undefined, w.freeDay === today, w.freeDay === today ? "已领取" : "免费领取")}</article><h3>新手七日成长</h3>${newcomerTasks(
     s,
   )
     .map(
       (t) =>
-        `<article class="reward-entry"><b>第 ${t.id} 天 · ${t.name}</b><small>${Math.min(t.progress, t.goal)} / ${t.goal} ${!t.unlocked ? "· 未开放" : ""}</small><p>${rewardText(t.reward)}</p>${btn("newcomer", t.id, !t.unlocked || t.claimed || t.progress < t.goal, t.claimed ? "已领取" : "领取")}</article>`,
+        `<article class="reward-entry"><b>第 ${t.id} 天 · ${t.name}</b><small>${Math.min(t.progress, t.goal)} / ${t.goal} ${!t.unlocked ? "· 未开放" : ""}</small>${rewardTiles(t.reward)}${btn("newcomer", t.id, !t.unlocked || t.claimed || t.progress < t.goal, t.claimed ? "已领取" : "领取")}</article>`,
     )
     .join("")}`;
 }
@@ -157,11 +160,24 @@ export function wireRevamp(ctx) {
       run(async () =>
         setNotice(rewardText(await dispatch({ type: "rewardAll" }))),
       );
-  root
-    .querySelectorAll("[data-position]")
-    .forEach(
-      (b) => (b.onclick = () => openFormation(Number(b.dataset.position), ctx)),
-    );
+  root.querySelectorAll('[data-position]').forEach(b => b.onclick = () => {
+    formationPosition = Number(b.dataset.position); ctx.render();
+  });
+  const rolePicker = root.querySelector('[data-inline-role]');
+  if (rolePicker) rolePicker.onchange = () => { formationRole = rolePicker.value; ctx.render(); };
+  root.querySelectorAll('.inline-formation-picker [data-pick]').forEach(b => b.onclick = () => run(async () => {
+    const positions = formationPositions(getState()), id = Number(b.dataset.pick);
+    const position = formationPosition ?? Math.max(0,positions.indexOf(null)), old = positions[position], previous = positions.indexOf(id);
+    if (previous >= 0) positions[previous] = old;
+    positions[position] = id;
+    await dispatch({type:'formation',positions});
+    formationPosition = position; setNotice('阵容已保存');
+  }));
+  const clearPosition = root.querySelector('[data-inline-clear]');
+  if (clearPosition) clearPosition.onclick = () => run(async () => {
+    const positions = formationPositions(getState()); positions[formationPosition ?? Math.max(0,positions.indexOf(null))] = null;
+    await dispatch({type:'formation',positions});setNotice('站位已空出');
+  });
   const recommend = root.querySelector("[data-recommend]");
   if (recommend)
     recommend.onclick = () =>

@@ -364,57 +364,8 @@ export function scenery(theme = "town") {
   return `<svg class="pixel-scene" viewBox="0 0 384 240" preserveAspectRatio="xMidYMid slice" shape-rendering="crispEdges" aria-hidden="true">${out}</svg>`;
 }
 export function monster(kind = 0) {
-  let body = "";
-  const r = (x, y, w, h, c) =>
-    (body += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${c}"/>`);
-  r(7, 43, 28, 3, "#1b2c3166");
-  if (kind === 0) {
-    r(7, 29, 26, 12, "#355652");
-    r(11, 24, 19, 6, "#355652");
-    r(9, 29, 21, 10, "#83b09b");
-    r(12, 26, 14, 4, "#83b09b");
-    r(14, 25, 8, 2, "#a9d2a9");
-    r(11, 29, 6, 3, "#a9d2a9");
-    r(14, 33, 2, 3, "#253b40");
-    r(24, 33, 2, 3, "#253b40");
-    r(18, 38, 4, 1, "#38515a");
-    r(8, 41, 25, 2, "#4d8a75");
-    r(24, 23, 2, 5, "#638b66");
-    r(22, 22, 7, 2, "#abc578");
-  } else if (kind === 1) {
-    r(10, 12, 20, 16, "#294c44");
-    r(12, 14, 16, 12, "#9bb37a");
-    r(5, 16, 7, 4, "#78966a");
-    r(28, 16, 7, 4, "#78966a");
-    r(13, 10, 13, 5, "#748264");
-    r(13, 19, 3, 2, "#242e35");
-    r(25, 19, 3, 2, "#242e35");
-    r(18, 24, 7, 2, "#ecddac");
-    r(13, 29, 14, 11, "#8c6851");
-    r(10, 28, 4, 9, "#90a672");
-    r(28, 28, 4, 9, "#90a672");
-    r(14, 38, 5, 6, "#4b5245");
-    r(24, 38, 5, 6, "#4b5245");
-    r(32, 19, 2, 23, "#ae9369");
-    r(30, 17, 7, 5, "#b7bfbd");
-    r(15, 31, 10, 3, "#a68363");
-  } else {
-    r(12, 10, 20, 16, "#293d4b");
-    r(14, 12, 16, 12, "#89969a");
-    r(13, 7, 3, 6, "#b3b8a9");
-    r(27, 7, 3, 6, "#b3b8a9");
-    r(15, 20, 4, 2, "#f39b6f");
-    r(24, 20, 4, 2, "#f39b6f");
-    r(18, 24, 8, 4, "#394751");
-    r(10, 28, 22, 12, "#526675");
-    r(12, 30, 18, 8, "#8e9799");
-    r(18, 32, 6, 5, "#ddab73");
-    r(7, 29, 6, 9, "#536776");
-    r(31, 29, 5, 9, "#536776");
-    r(12, 39, 7, 5, "#344958");
-    r(26, 39, 7, 5, "#344958");
-    r(34, 16, 3, 23, "#b7bda6");
-    r(31, 38, 8, 2, "#d3b778");
-  }
-  return `<svg class="hero-art pixel-sprite monster" viewBox="0 0 40 48" shape-rendering="crispEdges" role="img" aria-label="${["荆棘史莱姆", "荒林哥布林", "石甲守卫"][kind]}">${body}</svg>`;
+  const index = Math.max(0, Math.min(2, Number(kind) || 0));
+  const x = index * 724;
+  const url = new URL("art/enemies.webp", document.baseURI).href;
+  return `<svg class="hero-art pixel-sprite monster" viewBox="${x} 0 724 724" role="img" aria-label="${["荆棘史莱姆", "荒林哥布林", "石甲守卫"][index]}"><defs><clipPath id="enemy-cell-${index}"><rect x="${x}" y="0" width="724" height="724"/></clipPath></defs><image href="${url}" width="2172" height="724" clip-path="url(#enemy-cell-${index})"/></svg>`;
 }
