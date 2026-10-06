@@ -106,9 +106,176 @@ test("hard pity does not downgrade an UR roll", () => {
   s.pity = 49;
   assert.equal(summon(s, 1, () => 0)[0].rarity, "UR");
 });
-import {simulateCombat} from '../src/game.js';
-test('six-person formation is accepted but a seventh hero is rejected',()=>{const s=fresh();for(let id=0;id<7;id++)s.collection[id]=1;applyAction(s,{type:'team',team:[0,1,2,3,4,5]});assert.ok(validSave(s));assert.throws(()=>applyAction(s,{type:'team',team:[0,1,2,3,4,5,6]}));});
-test('combat records enemy retaliation and health loss',()=>{const s=fresh(),r=battle(s,()=>.99);assert.ok(r.events.some(e=>e.side==='e'&&e.damage>0));assert.ok(r.players.some(u=>u.hp<u.maxHp));assert.equal(r.won,true);assert.ok(r.rounds>1&&r.rounds<=20);});
-test('healing and mage area skills occur on the third round',()=>{const r=simulateCombat([{name:'Tank',power:30,role:'骑士',skill:'Guard'},{name:'Healer',power:20,role:'治疗',skill:'Heal'},{name:'Mage',power:20,role:'法师',skill:'Storm'}],[{name:'Foe1',power:40,role:'战士'},{name:'Foe2',power:40,role:'战士'}],()=>.99,true);assert.ok(r.events.some(e=>e.heal>0));const targets=new Set(r.events.filter(e=>e.skill==='Storm').map(e=>e.target));assert.equal(targets.size,2);});
-import {claimIdle,idleReward} from '../src/game.js';
-test('idle income caps at eight hours and cannot be claimed twice',()=>{const s=fresh();s.idleClaimAt=0;s.cleared=2;const reward=claimIdle(s,24*3600000);assert.equal(reward.minutes,480);assert.equal(reward.coins,4320);assert.equal(reward.gems,96);assert.throws(()=>claimIdle(s,24*3600000));assert.equal(idleReward(s,24*3600000+60000).minutes,1);});
+import { simulateCombat } from "../src/game.js";
+test("six-person formation is accepted but a seventh hero is rejected", () => {
+  const s = fresh();
+  for (let id = 0; id < 7; id++) s.collection[id] = 1;
+  applyAction(s, { type: "team", team: [0, 1, 2, 3, 4, 5] });
+  assert.ok(validSave(s));
+  assert.throws(() =>
+    applyAction(s, { type: "team", team: [0, 1, 2, 3, 4, 5, 6] }),
+  );
+});
+test("combat records enemy retaliation and health loss", () => {
+  const s = fresh(),
+    r = battle(s, () => 0.99);
+  assert.ok(r.events.some((e) => e.side === "e" && e.damage > 0));
+  assert.ok(r.players.some((u) => u.hp < u.maxHp));
+  assert.equal(r.won, true);
+  assert.ok(r.rounds > 1 && r.rounds <= 20);
+});
+test("healing and mage area skills occur on the third round", () => {
+  const r = simulateCombat(
+    [
+      { name: "Tank", power: 30, role: "骑士", skill: "Guard" },
+      { name: "Healer", power: 20, role: "治疗", skill: "Heal" },
+      { name: "Mage", power: 20, role: "法师", skill: "Storm" },
+    ],
+    [
+      { name: "Foe1", power: 70, role: "战士" },
+      { name: "Foe2", power: 70, role: "战士" },
+    ],
+    () => 0.99,
+    true,
+  );
+  assert.ok(r.events.some((e) => e.heal > 0));
+  const targets = new Set(
+    r.events.filter((e) => e.skill === "Storm").map((e) => e.target),
+  );
+  assert.equal(targets.size, 2);
+});
+import { claimIdle, idleReward } from "../src/game.js";
+test("idle income caps at eight hours and cannot be claimed twice", () => {
+  const s = fresh();
+  s.idleClaimAt = 0;
+  s.cleared = 2;
+  const reward = claimIdle(s, 24 * 3600000);
+  assert.equal(reward.minutes, 480);
+  assert.equal(reward.coins, 4320);
+  assert.equal(reward.gems, 96);
+  assert.throws(() => claimIdle(s, 24 * 3600000));
+  assert.equal(idleReward(s, 24 * 3600000 + 60000).minutes, 1);
+});
+import {
+  heroes,
+  starUp,
+  forgeUp,
+  claimDaily,
+  dailyState,
+  towerBattle,
+} from "../src/game.js";
+test("expanded roster has stable starter IDs and every rarity and role", () => {
+  assert.equal(heroes.length, 38);
+  assert.equal(heroes[8].name, "艾可");
+  assert.equal(heroes[10].name, "米娅");
+  for (const r of ["R", "SR", "SSR", "UR"])
+    assert.ok(heroes.filter((h) => h.rarity === r).length >= 6);
+});
+test("legacy save adds progression fields without losing duplicates or gear", () => {
+  const s = fresh();
+  s.collection[8] = 10;
+  s.inventory = ["iron"];
+  s.equipment = { 8: { weapon: "iron" } };
+  for (const k of ["stars", "forge", "tower", "daily"]) delete s[k];
+  const m = migrate(s);
+  assert.equal(m.collection[8], 10);
+  assert.deepEqual(m.equipment, s.equipment);
+  assert.deepEqual(m.stars, {});
+  assert.ok(validSave(m));
+});
+test("star ascension consumes duplicates, keeps hero and increases power through five stars", () => {
+  const s = fresh();
+  s.collection[8] = 16;
+  s.coins = 10000;
+  for (let n = 1; n <= 5; n++) {
+    const before = power(s, 8),
+      r = starUp(s, 8);
+    assert.equal(r.stars, n);
+    assert.ok(power(s, 8) > before);
+    assert.ok(validSave(s));
+  }
+  assert.equal(s.collection[8], 1);
+  assert.throws(() => starUp(s, 8));
+  assert.throws(() => starUp(s, 99));
+});
+test("equipment enhancement applies to owned copies and rejects forged or capped gear", () => {
+  const s = fresh();
+  assert.throws(() => forgeUp(s, "iron"));
+  buyGear(s, "iron");
+  equip(s, 8, "iron");
+  const before = power(s, 8);
+  forgeUp(s, "iron");
+  assert.equal(power(s, 8), before + 6);
+  assert.equal(s.coins, 500);
+  assert.ok(validSave(s));
+  assert.ok(!validSave({ ...s, forge: { moon: 1 } }));
+  s.forge.iron = 10;
+  assert.throws(() => forgeUp(s, "iron"));
+});
+test("daily rewards cannot repeat and server day rollover resets eligibility", () => {
+  const s = fresh();
+  const r = claimDaily(s, "signin");
+  assert.equal(r.gems, 150);
+  assert.throws(() => claimDaily(s, "signin"));
+  assert.throws(() => claimDaily(s, "summon"));
+  summon(s, 10, () => 0.99);
+  claimDaily(s, "summon");
+  assert.throws(() => claimDaily(s, "summon"));
+  const d = dailyState(s, Date.now() + 86400000);
+  assert.equal(d.signed, false);
+  assert.deepEqual(d.claimed, []);
+  assert.ok(validSave(s));
+});
+test("tower rewards advance exactly one floor and cap at thirty", () => {
+  const s = fresh();
+  s.collection[0] = 1;
+  s.team = [0];
+  s.levels[0] = 50;
+  const a = towerBattle(s, () => 0.99);
+  assert.ok(a.won);
+  assert.equal(s.tower, 1);
+  assert.equal(a.floor, 1);
+  s.tower = 30;
+  assert.throws(() => towerBattle(s));
+  const weak = fresh();
+  weak.team = [8];
+  weak.tower = 29;
+  const gems = weak.gems;
+  assert.equal(towerBattle(weak, () => 0.99).won, false);
+  assert.equal(weak.tower, 29);
+  assert.equal(weak.gems, gems);
+});
+test("element advantage, knight shield, ranger rear target and control are recorded", () => {
+  const unit = (name, power, role, element) => ({ name, power, role, element });
+  const a = simulateCombat(
+      [unit("fire", 20, "战士", "火")],
+      [unit("wind", 100, "战士", "风")],
+      () => 0.99,
+      true,
+    ),
+    b = simulateCombat(
+      [unit("fire", 20, "战士", "水")],
+      [unit("wind", 100, "战士", "风")],
+      () => 0.99,
+      true,
+    );
+  assert.ok(a.events[0].damage > b.events[0].damage);
+  const r = simulateCombat(
+    [
+      unit("tank", 70, "骑士", "水"),
+      unit("ranger", 20, "游侠", "风"),
+      unit("mage", 20, "法师", "暗"),
+    ],
+    [unit("front", 100, "骑士", "火"), unit("rear", 100, "战士", "水")],
+    () => 0,
+    true,
+  );
+  assert.ok(r.events.some((e) => e.shield > 0));
+  assert.ok(
+    r.events.some(
+      (e) => e.actor === "p1" && e.round === 3 && e.target === "e1",
+    ),
+  );
+  assert.ok(r.events.some((e) => e.status === "control"));
+  assert.ok(r.events.some((e) => e.status === "stun"));
+});

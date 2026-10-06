@@ -17,6 +17,32 @@ export const heroes = [
   ["罗伊", "见习剑士", "⚔", "R", "战士", "勇气一击"],
   ["米娅", "星灯使者", "✦", "R", "治疗", "星灯祈愿"],
   ["诺亚", "石盾卫士", "⬡", "R", "骑士", "坚岩守护"],
+  ["索拉", "黎明龙骑", "☀", "UR", "骑士", "龙翼圣盾"],
+  ["夜璃", "星渊魔女", "✧", "UR", "法师", "星渊禁锢"],
+  ["芙蕾", "生命神谕", "❀", "UR", "治疗", "万物复苏"],
+  ["塞恩", "风暴枪王", "ϟ", "UR", "游侠", "雷暴穿刺"],
+  ["赤羽", "火山武姬", "♜", "SSR", "战士", "熔岩破阵"],
+  ["澄月", "潮歌巫女", "☾", "SSR", "治疗", "海月祈愿"],
+  ["赫墨", "沙漠守望", "⬡", "SSR", "骑士", "砂岩壁垒"],
+  ["银叶", "雪林猎手", "➶", "SSR", "游侠", "霜叶追击"],
+  ["伊朵", "花灵术士", "❀", "SSR", "法师", "花海结界"],
+  ["玄鸦", "暗夜刺客", "✦", "SSR", "游侠", "黑羽突袭"],
+  ["贝尔", "机巧少女", "⚙", "SR", "游侠", "齿轮连射"],
+  ["卡洛", "烈焰拳师", "♜", "SR", "战士", "烈火连拳"],
+  ["雅娜", "冰湖修女", "❄", "SR", "治疗", "冰泉赐福"],
+  ["欧文", "铜甲卫长", "⬡", "SR", "骑士", "铜墙守护"],
+  ["莉塔", "风铃法师", "✧", "SR", "法师", "风铃共鸣"],
+  ["墨菲", "影刃佣兵", "⚔", "SR", "战士", "影刃闪击"],
+  ["琥珀", "灯塔医者", "✦", "SR", "治疗", "暖光治愈"],
+  ["菲恩", "荒野斥候", "➶", "SR", "游侠", "猎鹰标记"],
+  ["可可", "蘑菇学徒", "♧", "R", "法师", "孢子弹"],
+  ["巴克", "矿山护卫", "⬡", "R", "骑士", "矿石护盾"],
+  ["桃桃", "村庄药师", "❀", "R", "治疗", "草药香气"],
+  ["莱特", "沙丘弓手", "➶", "R", "游侠", "飞砂箭"],
+  ["阿炎", "锻炉少年", "⚔", "R", "战士", "火星斩"],
+  ["瑞雪", "雪乡旅者", "❄", "R", "法师", "雪花术"],
+  ["波波", "海港水手", "♜", "R", "战士", "浪涛击"],
+  ["妮娜", "林间歌者", "♧", "R", "治疗", "林间小调"],
 ].map(([name, title, icon, rarity, role, skill], id) => ({
   id,
   name,
@@ -25,6 +51,21 @@ export const heroes = [
   rarity,
   role,
   skill,
+  element: [
+    "光",
+    "火",
+    "暗",
+    "水",
+    "风",
+    "暗",
+    "风",
+    "水",
+    "风",
+    "火",
+    "光",
+    "水",
+  ][id % 12],
+  story: `${name}来自${["星灯镇", "熔火山脉", "暮影森林", "霜月海岸"][id % 4]}，为了守护失落的星灯，加入了冒险者小队。`,
 }));
 export const gear = [
   {
@@ -98,6 +139,17 @@ export function fresh() {
     arenaDay: "",
     arenaAttempts: 0,
     idleClaimAt: Date.now(),
+    stars: {},
+    forge: {},
+    tower: 0,
+    daily: {
+      day: "",
+      summons: 0,
+      battles: 0,
+      upgrades: 0,
+      claimed: [],
+      signed: false,
+    },
   };
 }
 export function migrate(s) {
@@ -105,12 +157,16 @@ export function migrate(s) {
     const next = { ...fresh(), ...s, version: 2 };
     return validSave(next) ? next : null;
   }
-  const next=s?.version===2?{...s,idleClaimAt:s.idleClaimAt??Date.now()}:s;
+  const next =
+    s?.version === 2
+      ? { ...fresh(), ...s, idleClaimAt: s.idleClaimAt ?? Date.now() }
+      : s;
   return validSave(next) ? next : null;
 }
 export function summon(state, count, rng = Math.random) {
   if (![1, 10].includes(count) || state.gems < count * 150)
     throw new Error("星钻不足");
+  dailyState(state).summons += count;
   state.gems -= count * 150;
   const result = [];
   for (let i = 0; i < count; i++) {
@@ -138,14 +194,18 @@ export function level(state, id) {
 }
 export function power(state, id) {
   const equipped = Object.values(state.equipment?.[id] || {}).reduce(
-    (n, item) => n + (gear.find((g) => g.id === item)?.bonus || 0),
+    (n, item) =>
+      n +
+      (gear.find((g) => g.id === item)?.bonus || 0) +
+      (state.forge?.[item] || 0) * 6,
     0,
   );
   return (
     rarities[heroes[id].rarity].power +
     Math.min(10, (state.collection[id] || 1) - 1) * 8 +
     (level(state, id) - 1) * 5 +
-    equipped
+    equipped +
+    (state.stars?.[id] || 0) * 60
   );
 }
 export function teamPower(state) {
@@ -160,6 +220,7 @@ export function upgrade(state, id) {
   if (level(state, id) >= 50) throw new Error("已达到 50 级上限");
   const cost = upgradeCost(state, id);
   if (state.coins < cost) throw new Error("金币不足");
+  dailyState(state).upgrades++;
   state.coins -= cost;
   state.levels[id] = level(state, id) + 1;
   return { id, level: state.levels[id], cost };
@@ -191,56 +252,241 @@ export function equip(state, id, item, slot) {
   if (total <= used) throw new Error("没有空闲装备，请先从其他角色卸下");
   state.equipment[id][g.slot] = item;
 }
-export function idleReward(state,now=Date.now()){
- const minutes=Math.min(480,Math.floor(Math.max(0,now-(state.idleClaimAt??now))/60000));
- return {minutes,coins:minutes*(5+state.cleared*2),gems:Math.floor(minutes/5)};
+export function idleReward(state, now = Date.now()) {
+  const minutes = Math.min(
+    480,
+    Math.floor(Math.max(0, now - (state.idleClaimAt ?? now)) / 60000),
+  );
+  return {
+    minutes,
+    coins: minutes * (5 + state.cleared * 2),
+    gems: Math.floor(minutes / 5),
+  };
 }
-export function claimIdle(state,now=Date.now()){
- const reward=idleReward(state,now);if(!reward.minutes)throw new Error('暂时没有放置收益，请至少等待一分钟');
- state.coins+=reward.coins;state.gems+=reward.gems;state.idleClaimAt=now-((now-state.idleClaimAt)%60000);return reward;
+export function claimIdle(state, now = Date.now()) {
+  const reward = idleReward(state, now);
+  if (!reward.minutes) throw new Error("暂时没有放置收益，请至少等待一分钟");
+  state.coins += reward.coins;
+  state.gems += reward.gems;
+  state.idleClaimAt = now - ((now - state.idleClaimAt) % 60000);
+  return reward;
 }
 export function enemyPower(stage) {
   return 45 + stage * 25;
 }
-export function simulateCombat(attacking, defending, rng=Math.random, pvp=false) {
-  const players=attacking.map((unit,i)=>({...unit,unitId:'p'+i,maxHp:Math.round(unit.power*4+25),hp:Math.round(unit.power*4+25)}));
-  const enemies=defending.map((unit,i)=>({...unit,unitId:'e'+i,maxHp:Math.round(unit.power*(pvp?4:3)+(pvp?25:15)),hp:Math.round(unit.power*(pvp?4:3)+(pvp?25:15))}));
-  const events=[];
-  const hit=(actor,target,multiplier,skill)=>{const critical=rng()<.15;const raw=Math.round((actor.power*.7+2)*(.9+rng()*.2)*multiplier*(critical?1.5:1));const damage=Math.min(target.hp,Math.max(1,Math.round(raw*(target.role==='骑士'?.78:1))));target.hp-=damage;events.push({actor:actor.unitId,target:target.unitId,damage,hp:target.hp,maxHp:target.maxHp,critical,skill,side:actor.unitId[0]});};
-  let rounds=0;
-  for(let round=1;round<=20;round++){
-    rounds=round;
-    for(const side of [players,enemies]){
-      const opponents=side===players?enemies:players;
-      for(const actor of side){
-        if(actor.hp<=0)continue;
-        const alive=opponents.filter(u=>u.hp>0);if(!alive.length)break;
-        const skillRound=round%3===0;
-        if(skillRound&&actor.role==='治疗'){
-          const ally=side.filter(u=>u.hp>0).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0];const heal=Math.min(ally.maxHp-ally.hp,Math.round(actor.power*.9+12));ally.hp+=heal;events.push({actor:actor.unitId,target:ally.unitId,heal,hp:ally.hp,maxHp:ally.maxHp,skill:actor.skill||'恢复之光',side:actor.unitId[0]});
+export function simulateCombat(
+  attacking,
+  defending,
+  rng = Math.random,
+  pvp = false,
+) {
+  const players = attacking.map((unit, i) => ({
+    ...unit,
+    unitId: "p" + i,
+    maxHp: Math.round(unit.power * 4 + 25),
+    hp: Math.round(unit.power * 4 + 25),
+  }));
+  const enemies = defending.map((unit, i) => ({
+    ...unit,
+    unitId: "e" + i,
+    maxHp: Math.round(unit.power * (pvp ? 4 : 3) + (pvp ? 25 : 15)),
+    hp: Math.round(unit.power * (pvp ? 4 : 3) + (pvp ? 25 : 15)),
+  }));
+  const events = [];
+  const advantage = (a, b) =>
+    ({ 火: "风", 风: "水", 水: "火", 光: "暗", 暗: "光" })[a] === b ? 1.25 : 1;
+  const hit = (actor, target, multiplier, skill, round) => {
+    const critical = rng() < 0.15;
+    const elemental = advantage(actor.element, target.element);
+    const raw = Math.round(
+      (actor.power * 0.7 + 2) *
+        (0.9 + rng() * 0.2) *
+        multiplier *
+        (critical ? 1.5 : 1) *
+        elemental,
+    );
+    let damage = Math.max(
+      1,
+      Math.round(raw * (target.role === "骑士" ? 0.78 : 1)),
+    );
+    const absorbed = Math.min(target.shield || 0, damage);
+    target.shield = (target.shield || 0) - absorbed;
+    damage = Math.min(target.hp, damage - absorbed);
+    target.hp -= damage;
+    events.push({
+      round,
+      actor: actor.unitId,
+      target: target.unitId,
+      damage,
+      absorbed,
+      hp: target.hp,
+      maxHp: target.maxHp,
+      critical,
+      advantage: elemental > 1,
+      skill,
+      side: actor.unitId[0],
+    });
+  };
+  let rounds = 0;
+  for (let round = 1; round <= 20; round++) {
+    rounds = round;
+    for (const side of [players, enemies]) {
+      const opponents = side === players ? enemies : players;
+      for (const actor of side) {
+        if (actor.hp <= 0) continue;
+        if (actor.stunned) {
+          actor.stunned = false;
+          events.push({
+            round,
+            actor: actor.unitId,
+            target: actor.unitId,
+            status: "stun",
+            hp: actor.hp,
+            maxHp: actor.maxHp,
+            skill: "控制 · 跳过行动",
+            side: actor.unitId[0],
+          });
+          continue;
         }
-        const multiplier=skillRound?(actor.role==='法师'?1.25:actor.role==='战士'?1.6:1.2):1;
-        const targets=skillRound&&actor.role==='法师'?alive:alive.slice(0,1);
-        for(const target of targets)hit(actor,target,multiplier,skillRound?(actor.skill||'蓄力一击'):'普通攻击');
+        const alive = opponents.filter((u) => u.hp > 0);
+        if (!alive.length) break;
+        const skillRound = round % 3 === 0;
+        if (skillRound && actor.role === "骑士") {
+          const amount = Math.round(actor.power * 0.65);
+          for (const ally of side.filter((u) => u.hp > 0)) {
+            ally.shield = amount;
+            events.push({
+              round,
+              actor: actor.unitId,
+              target: ally.unitId,
+              shield: amount,
+              hp: ally.hp,
+              maxHp: ally.maxHp,
+              skill: actor.skill || "守护壁垒",
+              side: actor.unitId[0],
+            });
+          }
+        }
+        if (skillRound && actor.role === "治疗") {
+          const ally = side
+            .filter((u) => u.hp > 0)
+            .sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+          const heal = Math.min(
+            ally.maxHp - ally.hp,
+            Math.round(actor.power * 0.9 + 12),
+          );
+          ally.hp += heal;
+          events.push({
+            round,
+            actor: actor.unitId,
+            target: ally.unitId,
+            heal,
+            hp: ally.hp,
+            maxHp: ally.maxHp,
+            skill: actor.skill || "恢复之光",
+            side: actor.unitId[0],
+          });
+        }
+        const multiplier = skillRound
+          ? actor.role === "法师"
+            ? 1.25
+            : actor.role === "战士"
+              ? 1.6
+              : 1.2
+          : 1;
+        const targets =
+          skillRound && actor.role === "法师"
+            ? alive
+            : skillRound && actor.role === "游侠"
+              ? alive.slice(-1)
+              : alive.slice(0, 1);
+        for (const target of targets)
+          hit(
+            actor,
+            target,
+            multiplier,
+            skillRound ? actor.skill || "蓄力一击" : "普通攻击",
+            round,
+          );
+        if (
+          skillRound &&
+          actor.role === "法师" &&
+          alive[0].hp > 0 &&
+          rng() < 0.25
+        ) {
+          alive[0].stunned = true;
+          events.push({
+            round,
+            actor: actor.unitId,
+            target: alive[0].unitId,
+            status: "control",
+            hp: alive[0].hp,
+            maxHp: alive[0].maxHp,
+            skill: "星力束缚",
+            side: actor.unitId[0],
+          });
+        }
       }
-      if(!opponents.some(u=>u.hp>0))break;
+      if (!opponents.some((u) => u.hp > 0)) break;
     }
-    if(!players.some(u=>u.hp>0)||!enemies.some(u=>u.hp>0))break;
+    if (!players.some((u) => u.hp > 0) || !enemies.some((u) => u.hp > 0)) break;
   }
-  return {won:players.some(u=>u.hp>0)&&!enemies.some(u=>u.hp>0),dealt:events.filter(e=>e.side==='p').reduce((n,e)=>n+(e.damage||0),0),target:enemies.reduce((n,u)=>n+u.maxHp,0),rounds,events,players,enemies};
+  return {
+    won: players.some((u) => u.hp > 0) && !enemies.some((u) => u.hp > 0),
+    dealt: events
+      .filter((e) => e.side === "p")
+      .reduce((n, e) => n + (e.damage || 0), 0),
+    target: enemies.reduce((n, u) => n + u.maxHp, 0),
+    rounds,
+    events,
+    players,
+    enemies,
+  };
 }
-export function battle(state,rng=Math.random){
- if(!state.team.length)throw new Error('请先编成队伍');
- const attacking=state.team.map(id=>({...heroes[id],power:power(state,id)}));
- const total=enemyPower(state.stage);
- const defending=Array.from({length:state.stage%3===0?1:3},(_,i)=>({name:state.stage%3===0?'星境守卫':['荆棘史莱姆','荒林哥布林','石甲卫士'][i],kind:state.stage%3===0?2:i,role:'战士',power:Math.round(total/(state.stage%3===0?1:3)),skill:'荒野重击'}));
- const result=simulateCombat(attacking,defending,rng);
- let reward=0,coins=0;
- if(result.won){reward=state.stage>state.cleared?350:60;coins=state.stage>state.cleared?350:120;state.gems+=reward;state.coins+=coins;state.cleared=Math.max(state.cleared,state.stage);}
- return {...result,reward,coins};
+export function battle(state, rng = Math.random) {
+  if (!state.team.length) throw new Error("请先编成队伍");
+  dailyState(state).battles++;
+  const attacking = state.team.map((id) => ({
+    ...heroes[id],
+    power: power(state, id),
+  }));
+  const total = enemyPower(state.stage);
+  const defending = Array.from(
+    { length: state.stage % 3 === 0 ? 1 : 3 },
+    (_, i) => ({
+      name:
+        state.stage % 3 === 0
+          ? "星境守卫"
+          : ["荆棘史莱姆", "荒林哥布林", "石甲卫士"][i],
+      kind: state.stage % 3 === 0 ? 2 : i,
+      role: "战士",
+      element: ["风", "火", "水"][i],
+      power: Math.round(total / (state.stage % 3 === 0 ? 1 : 3)),
+      skill: "荒野重击",
+    }),
+  );
+  const result = simulateCombat(attacking, defending, rng);
+  let reward = 0,
+    coins = 0;
+  if (result.won) {
+    reward = state.stage > state.cleared ? 350 : 60;
+    coins = state.stage > state.cleared ? 350 : 120;
+    state.gems += reward;
+    state.coins += coins;
+    state.cleared = Math.max(state.cleared, state.stage);
+  }
+  return { ...result, reward, coins };
 }
 export function applyAction(state, action, rng = Math.random) {
   switch (action.type) {
+    case "star":
+      return starUp(state, action.id);
+    case "forge":
+      return forgeUp(state, action.item);
+    case "daily":
+      return claimDaily(state, action.task);
+    case "tower":
+      return towerBattle(state, rng);
     case "summon":
       return summon(state, action.count, rng);
     case "upgrade":
@@ -314,6 +560,36 @@ export function validSave(s) {
       s.team.every(
         (id) => Number.isInteger(id) && heroes[id] && s.collection[id],
       ) &&
+      (s.stars === undefined ||
+        (record(s.stars) &&
+          Object.entries(s.stars).every(
+            ([id, n]) =>
+              s.collection[id] && Number.isInteger(n) && n >= 0 && n <= 5,
+          ))) &&
+      (s.forge === undefined ||
+        (record(s.forge) &&
+          Array.isArray(s.inventory) &&
+          Object.entries(s.forge).every(
+            ([id, n]) =>
+              s.inventory.includes(id) &&
+              Number.isInteger(n) &&
+              n >= 0 &&
+              n <= 10,
+          ))) &&
+      (s.tower === undefined ||
+        (Number.isInteger(s.tower) && s.tower >= 0 && s.tower <= 30)) &&
+      (s.daily === undefined ||
+        (record(s.daily) &&
+          typeof s.daily.day === "string" &&
+          ["summons", "battles", "upgrades"].every(
+            (k) => Number.isSafeInteger(s.daily[k]) && s.daily[k] >= 0,
+          ) &&
+          Array.isArray(s.daily.claimed) &&
+          new Set(s.daily.claimed).size === s.daily.claimed.length &&
+          s.daily.claimed.every((k) =>
+            ["summon", "battle", "upgrade"].includes(k),
+          ) &&
+          typeof s.daily.signed === "boolean")) &&
       record(s.levels) &&
       Object.entries(s.levels).every(
         ([id, n]) =>
@@ -326,7 +602,8 @@ export function validSave(s) {
       Number.isInteger(s.arenaAttempts) &&
       s.arenaAttempts >= 0 &&
       s.arenaAttempts <= 5 &&
-      (s.idleClaimAt===undefined||(Number.isSafeInteger(s.idleClaimAt)&&s.idleClaimAt>=0))
+      (s.idleClaimAt === undefined ||
+        (Number.isSafeInteger(s.idleClaimAt) && s.idleClaimAt >= 0))
     )
   )
     return false;
@@ -341,4 +618,118 @@ export function validSave(s) {
   return Object.entries(used).every(
     ([item, n]) => s.inventory.filter((x) => x === item).length >= n,
   );
+}
+
+export const dailyTasks = [
+  {
+    id: "summon",
+    key: "summons",
+    goal: 3,
+    name: "召唤三位伙伴",
+    gems: 100,
+    coins: 200,
+  },
+  {
+    id: "battle",
+    key: "battles",
+    goal: 3,
+    name: "挑战主线三次",
+    gems: 100,
+    coins: 300,
+  },
+  {
+    id: "upgrade",
+    key: "upgrades",
+    goal: 1,
+    name: "升级一位英雄",
+    gems: 50,
+    coins: 200,
+  },
+];
+export function dailyState(state, now = Date.now()) {
+  const day = new Date(now).toISOString().slice(0, 10);
+  if (state.daily?.day !== day)
+    state.daily = {
+      day,
+      summons: 0,
+      battles: 0,
+      upgrades: 0,
+      claimed: [],
+      signed: false,
+    };
+  return state.daily;
+}
+export function claimDaily(state, task) {
+  const d = dailyState(state);
+  if (task === "signin") {
+    if (d.signed) throw new Error("今日已经签到");
+    d.signed = true;
+    state.gems += 150;
+    state.coins += 300;
+    return { gems: 150, coins: 300 };
+  }
+  const t = dailyTasks.find((t) => t.id === task);
+  if (!t || d.claimed.includes(task) || d[t.key] < t.goal)
+    throw new Error("任务未完成或已领取");
+  d.claimed.push(task);
+  state.gems += t.gems;
+  state.coins += t.coins;
+  return t;
+}
+export function starCost(state, id) {
+  return {
+    copies: (state.stars?.[id] || 0) + 1,
+    coins: ((state.stars?.[id] || 0) + 1) * 500,
+  };
+}
+export function starUp(state, id) {
+  if (!Number.isInteger(id) || !heroes[id] || !state.collection[id])
+    throw new Error("尚未拥有角色");
+  state.stars ??= {};
+  if ((state.stars[id] || 0) >= 5) throw new Error("已经达到五星");
+  const cost = starCost(state, id);
+  if (state.collection[id] <= cost.copies || state.coins < cost.coins)
+    throw new Error("升星需要重复角色与金币，保留最后一位");
+  const before = power(state, id);
+  state.collection[id] -= cost.copies;
+  state.coins -= cost.coins;
+  state.stars[id] = (state.stars[id] || 0) + 1;
+  return { id, stars: state.stars[id], gain: power(state, id) - before };
+}
+export function forgeUp(state, item) {
+  const g = gear.find((g) => g.id === item);
+  if (!g || !state.inventory.includes(item)) throw new Error("尚未拥有装备");
+  state.forge ??= {};
+  const n = state.forge[item] || 0,
+    cost = (n + 1) * 200;
+  if (n >= 10 || state.coins < cost)
+    throw new Error("金币不足或装备已强化到十级");
+  state.coins -= cost;
+  state.forge[item] = n + 1;
+  return { name: g.name, level: n + 1 };
+}
+export function towerBattle(state, rng = Math.random) {
+  if (!state.team.length) throw new Error("请先编成队伍");
+  if ((state.tower || 0) >= 30) throw new Error("已通关三十层星灯塔");
+  const floor = (state.tower || 0) + 1,
+    total = 65 + floor * 35;
+  const result = simulateCombat(
+    state.team.map((id) => ({ ...heroes[id], power: power(state, id) })),
+    Array.from({ length: 3 }, (_, i) => ({
+      name: ["塔影卫兵", "星石守卫", "秘境术士"][i],
+      kind: i,
+      role: i === 2 ? "法师" : "战士",
+      element: ["火", "水", "风"][i],
+      power: Math.round(total / 3),
+    })),
+    rng,
+  );
+  const reward = result.won ? 100 + floor * 5 : 0,
+    coins = result.won ? 200 + floor * 25 : 0;
+  if (result.won) {
+    state.tower = floor;
+    state.gems += reward;
+    state.coins += coins;
+  }
+  return { ...result, reward, coins, floor };
 }

@@ -1,4 +1,12 @@
-import { fresh, migrate, applyAction, teamPower, heroes, power, simulateCombat } from "../src/game.js";
+import {
+  fresh,
+  migrate,
+  applyAction,
+  teamPower,
+  heroes,
+  power,
+  simulateCombat,
+} from "../src/game.js";
 class ApiError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -114,6 +122,7 @@ async function guildData(db, id) {
       contribution: m.contribution,
       power: teamPower(migrate(JSON.parse(m.state_json))),
       rating: m.rating,
+      team: migrate(JSON.parse(m.state_json)).team.map((id) => heroes[id]),
     })),
   };
 }
@@ -261,10 +270,24 @@ async function gameAction(db, user, input) {
     const defender = migrate(JSON.parse(opponent.state_json));
     if (!defender.team.length) fail("对手没有已保存的队伍");
     state.arenaAttempts++;
-    const combat=simulateCombat(state.team.map(id=>({...heroes[id],power:power(state,id)})),defender.team.map(id=>({...heroes[id],power:power(defender,id)})),random,true);
+    const combat = simulateCombat(
+      state.team.map((id) => ({ ...heroes[id], power: power(state, id) })),
+      defender.team.map((id) => ({
+        ...heroes[id],
+        power: power(defender, id),
+      })),
+      random,
+      true,
+    );
     state.coins += combat.won ? 200 : 80;
     ratingDelta = combat.won ? 15 : -8;
-    result = {...combat,reward:0,coins:combat.won?200:80,opponent:opponent.username,ratingDelta};
+    result = {
+      ...combat,
+      reward: 0,
+      coins: combat.won ? 200 : 80,
+      opponent: opponent.username,
+      ratingDelta,
+    };
   } else {
     try {
       result = applyAction(state, action, random);
@@ -360,7 +383,10 @@ async function route(request, env) {
     path = url.pathname,
     method = request.method;
   if (path === "/api/health" && method === "GET") {
-    const schema=await stmt(db, "SELECT version FROM schema_metadata ORDER BY version DESC LIMIT 1").first();
+    const schema = await stmt(
+      db,
+      "SELECT version FROM schema_metadata ORDER BY version DESC LIMIT 1",
+    ).first();
     return { ok: true, storage: "Cloudflare D1", schema: schema.version };
   }
   if (["/api/register", "/api/login"].includes(path) && method === "POST")

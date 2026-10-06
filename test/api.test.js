@@ -292,6 +292,42 @@ test("database accounts, cloud progress, guild cooperation, chat and arena", asy
       );
     },
   );
+  await t.test(
+    "new growth actions persist and repeated daily claims are rejected",
+    async () => {
+      const base = (await call("/me", eve.token)).state;
+      base.collection[8] = 3;
+      base.coins = 10000;
+      base.inventory = ["iron"];
+      sqlite
+        .prepare("UPDATE players SET state_json=? WHERE account_id=?")
+        .run(JSON.stringify(base), eve.user.id);
+      const act = async (action) => {
+        const p = await call("/me", eve.token);
+        return call("/action", eve.token, {
+          requestId: crypto.randomUUID(),
+          revision: p.revision,
+          action,
+        });
+      };
+      const star = await act({ type: "star", id: 8 });
+      assert.equal(star.status, 200);
+      assert.equal(star.state.stars[8], 1);
+      assert.equal(star.state.collection[8], 2);
+      const forged = await act({ type: "forge", item: "iron" });
+      assert.equal(forged.state.forge.iron, 1);
+      const signed = await act({ type: "daily", task: "signin" });
+      assert.equal(signed.status, 200);
+      assert.equal((await act({ type: "daily", task: "signin" })).status, 400);
+      const restored = await call("/login", null, {
+        username: "Eve",
+        password: "testpass789",
+      });
+      assert.equal(restored.state.stars[8], 1);
+      assert.equal(restored.state.forge.iron, 1);
+      assert.equal(restored.state.daily.signed, true);
+    },
+  );
   await t.test("logout revokes session", async () => {
     await call("/logout", eve.token, {});
     assert.equal((await call("/me", eve.token)).status, 401);
