@@ -1,0 +1,16 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE accounts (id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE, salt TEXT NOT NULL, password_hash TEXT NOT NULL, created_ms INTEGER NOT NULL);
+CREATE TABLE players (account_id TEXT PRIMARY KEY REFERENCES accounts(id), state_json TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0, rating INTEGER NOT NULL DEFAULT 1000, last_command TEXT, updated_ms INTEGER NOT NULL);
+CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL REFERENCES accounts(id), expires_ms INTEGER NOT NULL);
+CREATE INDEX sessions_expiry ON sessions(expires_ms);
+CREATE TABLE guilds (id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE, name TEXT NOT NULL, owner_id TEXT NOT NULL REFERENCES accounts(id), boss_hp INTEGER NOT NULL DEFAULT 3000, boss_round INTEGER NOT NULL DEFAULT 1, revision INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE members (account_id TEXT PRIMARY KEY REFERENCES accounts(id), guild_id TEXT NOT NULL REFERENCES guilds(id), contribution INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX members_guild ON members(guild_id);
+CREATE TABLE messages (id INTEGER PRIMARY KEY AUTOINCREMENT, channel TEXT NOT NULL, sender_id TEXT NOT NULL REFERENCES accounts(id), text TEXT NOT NULL, created_ms INTEGER NOT NULL);
+CREATE INDEX messages_channel ON messages(channel,id);
+CREATE TABLE commands (account_id TEXT NOT NULL REFERENCES accounts(id), request_id TEXT NOT NULL, result_json TEXT NOT NULL, created_ms INTEGER NOT NULL, PRIMARY KEY(account_id,request_id));
+CREATE TABLE rate_limits (key TEXT PRIMARY KEY, window INTEGER NOT NULL, hits INTEGER NOT NULL);
+CREATE TABLE duels (id TEXT PRIMARY KEY, attacker TEXT NOT NULL REFERENCES accounts(id), defender TEXT NOT NULL REFERENCES accounts(id), result_json TEXT NOT NULL, created_ms INTEGER NOT NULL);
+CREATE INDEX duels_attacker ON duels(attacker,created_ms);
+CREATE TABLE schema_metadata (version INTEGER PRIMARY KEY);
+INSERT INTO schema_metadata(version) VALUES(1);
