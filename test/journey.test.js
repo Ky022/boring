@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import{fresh,heroes,stageEnemies,simulateCombat}from'../src/game.js';
+import{growthGoals,summarizePulls,teamInsights}from'../src/journey.js';
+test('growth goals remain actionable after chapter completion without mutating save',()=>{const s=fresh(),before=structuredClone(s);assert.equal(growthGoals(s)[0].mode,'formation');s.cleared=3;assert.ok(growthGoals(s).some(g=>g.detail.includes('3/6')));s.cleared=36;assert.ok(!growthGoals(s).some(g=>g.title.startsWith('通关')));s.cleared=0;assert.deepEqual(s,before);});
+test('batch marks only first copy of an unowned hero as new',()=>{const out=summarizePulls([heroes[3],heroes[3],heroes[8]],{8:1});assert.deepEqual(out.map(h=>h.isNew),[true,false,false]);assert.equal(heroes[3].isNew,undefined);});
+test('twelve chapters have distinct bosses and ordinary enemies change with chapter',()=>{const names=Array.from({length:12},(_,i)=>stageEnemies((i+1)*3)[0].name);assert.equal(new Set(names).size,12);assert.notEqual(stageEnemies(7)[0].name,stageEnemies(10)[0].name);assert.ok(stageEnemies(7)[2].ability.effects.length);});
+test('failure advice responds to enemy control and guard mechanics',()=>{const result=simulateCombat([{name:'弱小游侠',role:'游侠',power:1,element:'火',position:3,ability:{effects:[]}}],[{name:'首领',role:'法师',power:1000,element:'水',ability:{effects:['freeze','guard']}}],()=>.99);assert.ok(result.tips.some(t=>t.includes('净化')));assert.ok(result.tips.some(t=>t.includes('破盾')));});

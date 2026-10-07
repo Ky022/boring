@@ -50,9 +50,15 @@ export function wireFormationDrag(ctx, selectPosition) {
   const move = e => {
     if (!pending || e.pointerId !== pending.pointerId) return;
     if (!screen.isConnected) { cleanup(); return; }
+    if (pending.scrolling) {
+      e.preventDefault(); pending.roster.scrollTop=pending.scrollTop+pending.y-e.clientY; return;
+    }
     if (!active) {
       // Quick swipes scroll the roster; hold briefly to pick up a hero.
-      if (Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>9) cleanup();
+      if (Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>9) {
+        if(pending.source===null){clearTimeout(timer);pending.scrolling=true;pending.roster=screen.querySelector('.inline-formation-roster');pending.scrollTop=pending.roster.scrollTop;e.preventDefault();}
+        else cleanup();
+      }
       return;
     }
     e.preventDefault(); ghost.style.left = `${e.clientX-32}px`; ghost.style.top = `${e.clientY-64}px`;
@@ -62,7 +68,7 @@ export function wireFormationDrag(ctx, selectPosition) {
   const finish = e => {
     if (!pending || e.pointerId !== pending.pointerId) return;
     const drag = active, target = drag && hit(e.clientX,e.clientY);
-    if (drag) { suppressUntil = performance.now()+500; e.preventDefault(); }
+    if (drag || pending.scrolling) { suppressUntil = performance.now()+500; e.preventDefault(); }
     cleanup();
     if (!drag || !target || ctx.isBusy()) return;
     const positions = formationPositions(ctx.getState()), next = moveHero(positions,drag.id,target.target);

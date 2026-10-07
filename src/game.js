@@ -932,6 +932,14 @@ export function stageEnemies(stage, elite = false) {
       hint: "祭司持续恢复，培养输出或控制打断行动。",
     },
   ];
+  mechanics.push(
+    {name:"风暴猎鹰",effects:["double","execute"],role:"游侠",element:"风",hint:"猎鹰追击后排，使用控制限制行动，治疗保护残血。"},
+    {name:"月蚀双刃",effects:["chain","drain"],role:"游侠",element:"暗",hint:"双刃连击并吸血，骑士护盾与集中输出可以应对。"},
+    {name:"镜湖守护者",effects:["counter","purify"],role:"骑士",element:"水",hint:"守护者净化并反击，风属性输出与破盾更有效。"},
+    {name:"星晶术士",effects:["freeze","break"],role:"法师",element:"光",hint:"术士控制并破盾，带净化和治疗，不要只依赖护盾。"},
+    {name:"黑羽女王",effects:["burn","execute"],role:"游侠",element:"暗",hint:"女王灼烧后收割残血，净化可打断灼烧收割配合。"},
+    {name:"终焉星龙",effects:["guard","chain","burn"],role:"法师",element:"火",hint:"星龙兼具护盾、连击与灼烧，搭配水属性、破盾和净化。"}
+  );
   const spec = mechanics[chapter % mechanics.length];
   if (boss)
     return [
@@ -943,6 +951,13 @@ export function stageEnemies(stage, elite = false) {
         ability: { effects: spec.effects, multiplier: 1.35 },
       },
     ];
+  if(chapter>=2 && !elite) return Array.from({length:3},(_,i)=>({
+    name:[spec.name+"先锋",spec.name+"卫队",spec.name+"术师"][i],kind:i,position:i,
+    role:i===1?"骑士":i===2?"法师":"战士",element:spec.element,power:Math.round(total/3),
+    skill:spec.name+" · "+["突击","守护","秘术"][i],
+    ability:{effects:i===2?spec.effects.slice(0,1):i===1?["guard"]:[],multiplier:elite?1.3:1.1},
+    hint:spec.hint,
+  }));
   return Array.from({ length: 3 }, (_, i) => ({
     name: elite
       ? ["精英斥候", "精英守卫", "精英术士"][i]

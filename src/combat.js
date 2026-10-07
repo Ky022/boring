@@ -51,6 +51,8 @@ export function simulateCombat(
       maxHp: target.maxHp,
       skill,
       side: actor.unitId[0],
+      shieldRemaining: target.shield,
+      controlled: target.stunned,
       ...data,
     });
   const healing = (actor, target, amount, round, skill, revive = false) => {
@@ -184,7 +186,12 @@ export function simulateCombat(
           : 1;
         let dealt = 0;
         for (const target of targets) {
-          dealt += hit(actor, target, multiplier, round, skill);
+          // Break shields before the strike so the specialist helps this turn.
+          if(skillRound && effects.includes('break') && target.shield>0){
+            target.shield=0;emit(actor,target,round,skill+' · 破盾',{status:'break'});
+          }
+          const finisher=skillRound && effects.includes('execute') && target.burn;
+          dealt += hit(actor, target, multiplier*(finisher?1.2:1), round, skill+(finisher?' · 灼烧收割':''));
           if (skillRound && effects.includes("double") && target.hp > 0)
             dealt += hit(actor, target, 0.65, round, skill + " · 追击");
         }
@@ -292,12 +299,17 @@ export function simulateCombat(
   if (!won) {
     if (!attacking.some((u) => u.role === "治疗"))
       tips.push("队伍缺少治疗，加入治疗英雄提高续航。");
-    if (attacking[0]?.role !== "骑士")
-      tips.push("把骑士放在第一位，保护输出与治疗。");
+    if (!attacking.some(u=>u.role === "骑士" && (u.position ?? 0)<3))
+      tips.push("把骑士放在前排，保护输出与治疗。");
     if (attacking.length < 6)
       tips.push("阵容未满六人，可以补上伙伴或借用好友英雄。");
     if (!formationBonuses(attacking).length)
       tips.push("上阵三位同阵营英雄，可激活攻击与生命加成。");
+    const enemyEffects=new Set(defending.flatMap(u=>u.ability?.effects||[]));
+    const playerEffects=new Set(attacking.flatMap(u=>u.ability?.effects||[]));
+    if((enemyEffects.has('burn')||enemyEffects.has('freeze'))&&!playerEffects.has('purify'))tips.push('敌方有灼烧或控制：可加入米娅、澄月等净化英雄。');
+    if(enemyEffects.has('guard')&&!playerEffects.has('break'))tips.push('敌方有护盾：可加入紫苑、赤羽等破盾英雄。');
+    if(enemyEffects.has('regen')&&!playerEffects.has('freeze'))tips.push('敌方持续恢复：可加入控制英雄打断行动。');
     tips.push("检查敌方属性克制，强化装备或升级英雄后再战。");
   }
   return {

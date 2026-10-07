@@ -1,0 +1,98 @@
+/* One compact, tactile game language across the existing screens. */
+:root { --ink:#4a4b40; --muted:#7b7b69; --line:#cbc8b7; }
+#app[data-screen] .primary,dialog.cinematic .primary { background:linear-gradient(#f4d995,#e9c776); border-color:#b9a475; box-shadow:inset 0 1px #fff6d4,0 2px 0 #b4a281; }
+#app[data-screen] .secondary,dialog.cinematic .secondary { background:linear-gradient(#f4f0e5,#e5e2d3); border-color:#c2beac; box-shadow:inset 0 1px #fffaf0,0 1px 0 #c5c1b2; }
+#app button:active:not(:disabled),dialog.cinematic button:active:not(:disabled) { transform:translateY(2px); box-shadow:none; }
+#app[data-screen] .game-dock { background:#eae7d8; border-top:2px solid #b5b7a3; }
+#app[data-screen] .game-dock button.active { background:#e6d8a9; box-shadow:inset 0 -3px #baa36c; }
+#app[data-screen] .scene-tabs button.active { background:#f8f5e9; box-shadow:inset 0 -3px #899a80; }
+#app[data-screen] .world-banner { height:69px; min-height:69px; background:#e2e6d8; }
+#app[data-screen] .world-banner-title h2 { font-size:17px; }
+#app[data-screen] .world-banner-title .game-icon { width:29px; height:29px; }
+.fullscreen-town .world-scene img { filter:saturate(.82); }
+.fullscreen-town .street-party { left:5%; width:90%; bottom:26%; justify-content:space-around; }
+.fullscreen-town .street-party button:nth-child(2n) { transform:translateY(-12px); }
+.fullscreen-town .street-party small { display:none; }
+.journey-goal { position:absolute; z-index:8; bottom:64px; left:9px; right:9px; text-align:left; padding:7px 24px 7px 10px; border:1px solid #b5bea7; border-radius:6px; background:#f6f3e6ee; color:#4f6050; }
+.journey-goal span { font-size:9px; color:#7b8c70; margin-right:7px; }.journey-goal b { font-size:11px; }
+.journey-goal small { display:block; font-size:9px; margin-top:3px; color:#7b7c67; }.journey-goal em { position:absolute; right:9px; top:10px; font:20px system-ui; }
+.town-travel > div { bottom:113px; }.sanctum-region-label { background:#f4f1e5dd; }
+#app[data-screen] .hero-tile { background:#eae8d8; border:1px solid #bdbdab; border-top:3px solid var(--rarity); box-shadow:0 2px 0 #c7c4b4; border-radius:5px; }
+.tile-interior { background:linear-gradient(#f4f0e2,#e0e4d5); }
+.tile-character { inset:18px 0 23px; }
+.tile-level { font-size:9px; }.tile-name { font-size:10px; font-weight:600; bottom:13px; }
+.tile-role { position:absolute; right:3px; top:17px; z-index:5; font-size:7px; color:#777962; }
+.hero-identity { font-size:10px; background:#edf0e3e8; color:#526248; border:1px solid #b7c0a8; padding:3px 8px; margin-top:4px; border-radius:5px; }
+.dossier-stars { line-height:24px; font-size:18px; }
+#app[data-screen] .dossier-nameplate { background:#454a3de8; border-color:#a9b494; }
+#app[data-screen] .dossier-side-tools button { background:#e9eddddF; border-color:#b9c1a7; }
+.skill-medallion { background:linear-gradient(#b9d6c0,#68858a); border:1px solid #929f8b; }
+.skill-medallion .game-icon { transform:none; }
+#app[data-screen] .dossier-stats { background:#e1e6d5; border-color:#bac4ab; }
+.team-insights { flex:none; display:flex; gap:4px; padding:4px 7px; flex-wrap:wrap; background:#e4eadc; border-top:1px solid #c2ccb5; }
+.team-insights span { font-size:9px; color:#627255; }
+#app[data-screen] .reference-formation .formation-card { border-radius:5px; background:linear-gradient(#f2efdf,#e2e7d7); }
+#app[data-screen] .formation-slots .chosen-position .position-ring { border-color:#7e9c7e; box-shadow:none; background:#b7d4a960; }
+.journey-objectives { padding:8px 10px; background:#e2e9d9; border:1px solid #bfccb1; border-radius:6px; margin-bottom:7px; }
+.journey-objectives span { display:block; font-size:12px; color:#53674b; font-weight:600; }.journey-objectives small { font-size:10px; color:#778368; }
+.enemy-preview { display:flex; gap:5px; flex-wrap:wrap; margin-top:8px; }.enemy-preview > span { flex:1; min-width:88px; padding:7px; border:1px solid #c5c9b9; border-radius:5px; background:#f7f6ea; }
+.enemy-preview b,.enemy-preview small,.enemy-preview em { display:block; }.enemy-preview b { font-size:11px; }.enemy-preview small { font-size:9px; margin:3px 0; }.enemy-preview em { font:9px/1.5 system-ui; color:#78816c; }
+#app[data-screen] .battle-panel { background:#f2f1e4; border-top:2px solid #a8b697; }
+#app[data-screen] .dungeon-board .section-heading { margin:8px 0; }.dungeon-board .section-heading small { display:none; }
+#app[data-screen] .dungeon-board .section-heading h2 { font-size:17px; }
+#app[data-screen] .dungeon-card { padding:9px; border-left-width:4px; background:#f7f6ea; }
+#app[data-screen] .equipment-card { box-shadow:0 2px 0 #d1d0bd; background:#f6f3e6; }
+.equipment-set-status { display:flex; gap:5px; flex-wrap:wrap; font-size:10px; padding:8px 0; color:#7b7e66; }
+.equipment-set-status span { background:#e4e7d8; border:1px solid #c1c8b0; padding:4px 6px; border-radius:5px; }.equipment-set-status .active { background:#d8e7cd; color:#4e6c40; }
+.equip-delta { font-weight:600; }.equip-delta.positive { color:#527746; }.equip-delta.negative { color:#a16a5d; }
+#app[data-screen] .reward-entry { border-left:3px solid #9faf8e; background:#f8f5e9; }
+#app[data-screen] .reward-entry:has(button:disabled) { border-left-color:#cbc8b7; }
+#app[data-screen] .signin-calendar > div { background:#f1efdf; border-bottom:2px solid #c3b991; }
+#app[data-screen] .signin-calendar .signed { border-bottom-color:#7e9b6f; }
+#app[data-screen] .guild-banner { background:#e5ebd8; border-color:#b6c2a4; }
+#app[data-screen] .boss-panel { border-top:3px solid #a3b58f; }
+#app[data-screen] .chat-message.mine { background:#dce9d3; border-color:#bacda8; }
+#app[data-screen] .chat-top { padding-bottom:7px; border-bottom:1px solid #d0d5bf; }
+#app[data-screen] .friend-card,#app[data-screen] .arena-list article { border-left:3px solid #a5b492; }
+#app[data-screen] .auth-intro { background:#e6ebdb; }
+.pull-kind { position:absolute; z-index:5; top:2px; right:3px; font:9px system-ui; padding:3px 5px; background:#ebe7d3; color:#766c50; border-radius:4px; }
+.pull-kind.new { background:#cde5b7; color:#4a6c39; }
+#app[data-screen] .summon-stage { background:#dbe3d7; }.summon-feature .painted-character { filter:saturate(.85); }
+.cinema-actions { flex-wrap:wrap; gap:6px; }.cinema-actions button { flex:1; min-width:85px; }
+.battle-impact { position:absolute; z-index:10; pointer-events:none; width:29px; height:29px; margin:-14px; border:3px solid #edddb0; border-radius:50%; animation:impact-pop .32s ease-out forwards; }
+.battle-impact[data-kind=critical] { border-color:#dfb073; width:42px; height:42px; margin:-21px; }.battle-impact[data-kind=advantage] { border-color:#a3d3cb; }
+.combat-unit.attacking .hero-art { animation:hero-lunge .26s ease-out; }.combat-unit.hit-flash .hero-art { animation:hero-hit .23s ease-out; }
+.combat-unit.shielded { filter:drop-shadow(0 0 2px #94c6d1); }.combat-unit.controlled .hero-art { filter:saturate(.5) drop-shadow(0 0 3px #8caaca); }
+.battle-fullscreen .combat-outcome { border-top:3px solid #a1b98d; }
+@keyframes hero-lunge { 45% { transform:translateX(var(--lunge,12px)) translateY(-3px); } }
+@keyframes hero-hit { 25% { transform:translateX(-3px); filter:brightness(1.5); } 75% { transform:translateX(3px); } }
+@keyframes impact-pop { from { transform:scale(.4); opacity:.9; } to { transform:scale(1.6); opacity:0; } }
+@media(max-height:620px) { .team-insights { padding:2px 6px; }.team-insights span { font-size:8px; } .hero-identity { font-size:9px; padding:2px 6px; }.journey-goal { padding:5px 20px 5px 8px; }.journey-goal small { font-size:8px; }.fullscreen-town .street-party { bottom:29%; } }
+@media(prefers-reduced-motion:reduce) { .combat-unit.attacking .hero-art,.combat-unit.hit-flash .hero-art,.battle-impact { animation:none; }.battle-impact { display:none; } }
+.summon-cinema { background:#f1f0e3; color:#525849; }
+.summon-cinema .summon-gate { height:70px; min-height:70px; margin:5px auto; }
+.summon-cinema .reveal-grid { grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; padding:3px; }
+.summon-cinema .reveal-grid.single { grid-template-columns:1fr; max-width:180px; margin:auto; }
+.summon-cinema .card.compact { width:100%; height:130px; min-height:0; border:1px solid var(--accent); border-top:3px solid var(--accent); background:#ecebdc; }
+.summon-cinema .card.compact .portrait { height:73px; min-height:0; display:flex; justify-content:center; padding-top:9px; }
+.summon-cinema .card.compact .portrait .pixel-character { width:62px; height:65px !important; }
+.summon-cinema .card.compact .card-info { padding:5px 1px; min-height:0; }
+.summon-cinema .card.compact .card-info small,.summon-cinema .card.compact .stats,.summon-cinema .card.compact .card-stars { display:none; }
+.summon-cinema .card.compact .card-info h3 { font-size:10px; margin:3px 0; }
+.summon-cinema .card.compact .rarity { font-size:8px; padding:1px 3px; }
+.summon-cinema .pull-kind { top:auto; bottom:2px; right:1px; left:1px; font-size:7px; padding:2px 1px; }
+.summon-cinema .card-back { height:130px; min-height:0; }
+.summon-cinema .cinema-heading h2 { font-size:21px; margin:8px 0; }.summon-cinema .cinema-heading p { font-size:11px; }
+.summon-cinema .cinema-actions { margin-top:12px; }.summon-cinema .cinema-actions button { padding:8px 3px; font-size:11px; }
+@media(max-height:620px) { .summon-cinema .summon-gate { display:none; }.summon-cinema .card.compact,.summon-cinema .card-back { height:110px; }.summon-cinema .card.compact .portrait { height:61px; }.summon-cinema .card.compact .portrait .pixel-character { height:52px !important; width:51px; } }
+.summon-cinema .reveal-slot { height:130px; min-height:130px; aspect-ratio:auto; padding:0; overflow:hidden; }
+.summon-cinema .card-front { height:100%; }
+.summon-cinema .card.compact .portrait { background:#dce5d5; border:0; }
+.summon-cinema .card.compact .card-info { height:51px; display:flex; align-items:center; justify-content:center; padding:2px 1px 14px; background:#eeecdc; }
+.summon-cinema .card.compact .card-info h3 { line-height:12px; text-shadow:none; }
+.summon-cinema .cinema-heading small { display:none; }
+.summon-cinema .cinema-actions { padding-top:10px; }
+@media(max-height:620px) { .summon-cinema .reveal-slot { height:110px; min-height:110px; } .summon-cinema .card.compact .card-info { height:45px; } }
+/* Clipping the rotating parent flattens its 3D faces in mobile Chromium. */
+.summon-cinema .reveal-slot { overflow:visible; }
+.summon-cinema .card-front,.summon-cinema .card-back { overflow:hidden; }

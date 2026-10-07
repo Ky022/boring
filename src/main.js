@@ -4,6 +4,8 @@ import "./hero-ui.css";
 import "./world-ui.css";
 import "./sanctum-ui.css";
 import "./soft-ui.css";
+import "./journey-ui.css";
+import { growthGoals, summarizePulls } from "./journey.js";
 import { worldScene, screenBanner, campaignMap, teamStrip, accountBanner, wireWorld } from "./world-ui.js";
 import { galleryView, heroDetailView, heroSkills, gameIcon } from "./hero-ui.js";
 import {
@@ -94,7 +96,7 @@ function save() {
 }
 const $ = document.querySelector("#app");
 function card(h, compact = false) {
-  return `<article class="card ${h.rarity} ${compact ? "compact" : ""}" style="--accent:${rarities[h.rarity].color}"><span class="rarity">${h.rarity}</span><span class="card-stars">${"★".repeat(state.stars?.[h.id] || 0) || "✦".repeat({ R: 2, SR: 3, SSR: 4, UR: 5 }[h.rarity])}</span><div class="portrait" data-detail="${h.id}" tabindex="0" role="button" aria-label="查看${h.name}详情">${illustration(h)}<div class="portrait-shine"></div></div><div class="card-info"><small>${h.title} · ${h.element} · Lv.${level(state, h.id)}</small><h3>${h.name}</h3><div class="stats">⚔ ${power(state, h.id)} <span>${state.collection[h.id] ? `已拥有 ×${state.collection[h.id]}` : "未拥有"}</span></div></div></article>`;
+  return `<article class="card ${h.rarity} ${compact ? "compact" : ""}" style="--accent:${rarities[h.rarity].color}"><span class="rarity">${h.rarity}</span><span class="card-stars">${"★".repeat(state.stars?.[h.id] || 0) || "✦".repeat({ R: 2, SR: 3, SSR: 4, UR: 5 }[h.rarity])}</span><div class="portrait" data-detail="${h.id}" tabindex="0" role="button" aria-label="查看${h.name}详情">${compact?sprite(h):illustration(h)}<div class="portrait-shine"></div></div><div class="card-info"><small>${h.title} · ${h.element} · Lv.${level(state, h.id)}</small><h3>${h.name}</h3><div class="stats">⚔ ${power(state, h.id)} <span>${state.collection[h.id] ? `已拥有 ×${state.collection[h.id]}` : "未拥有"}</span></div></div></article>`;
 }
 let busy = false,
   socialData = { messages: [], opponents: [], history: [] },
@@ -216,6 +218,13 @@ function render() {
     const node = $.querySelector(selector);
     if (node) node.scrollTop = top;
   }
+  $.querySelectorAll('[data-goal]').forEach(b=>b.onclick=()=>{
+    const goal=growthGoals(state)[Number(b.dataset.goal)];if(!goal)return;
+    tab=goal.tab;homeDrawer='';
+    if(tab==='collection'){collectionMode=goal.mode||'heroes';heroDetailOpen=goal.hero!==undefined;if(goal.hero!==undefined)selectedHero=goal.hero;}
+    if(tab==='adventure')adventureMode=goal.mode||'campaign';
+    render();
+  });
   wireTown();
   wireRevamp(revampContext());
   $.querySelectorAll("[data-adventure-mode]").forEach(
@@ -230,8 +239,9 @@ function render() {
   $.querySelectorAll("[data-ticket-pull]").forEach(ticketButton =>
     ticketButton.onclick = () =>
       run(async () => {
+        const before = {...state.collection};
         results = await dispatch({ type: "ticketSummon", count: Number(ticketButton.dataset.ticketPull) });
-        showSummon(results);
+        showSummon(summarizePulls(results,before));
         notice = "召唤券招募完成";
       }));
   $.querySelectorAll("[data-collection-mode]").forEach(
@@ -333,9 +343,10 @@ function render() {
     (b) =>
       (b.onclick = () =>
         run(async () => {
+          const before = {...state.collection};
           results = await dispatch({ type: "summon", count: +b.dataset.pull });
           notice = `召唤完成，获得 ${results.length} 位伙伴！`;
-          showSummon(results);
+          showSummon(summarizePulls(results,before));
         })),
   );
   $.querySelectorAll("[data-team]").forEach(
@@ -702,7 +713,7 @@ function homeView() {
     )
     .join(
       "",
-    )}</div><div class="town-side-tools"><button data-home-drawer="welfare">${gameIcon("gift")}<small>福利</small>${rewardDots(state).welfare ? "<i>●</i>" : ""}</button><button data-home-drawer="mail">${gameIcon("mail")}<small>邮箱</small>${rewardDots(state).mail ? "<i>●</i>" : ""}</button><button data-home-drawer="daily">${gameIcon("book")}<small>任务</small></button><button data-home-drawer="idle">${gameIcon("shield")}<small>挂机</small>${idle.minutes ? " <i>●</i>" : ""}</button></div><div class="town-travel"><button data-town-step="-1" aria-label="向左浏览街区">‹</button><div>${zones.map((z, i) => `<button data-town-dot="${i}" class="${townPage === i ? "active" : ""}" aria-pressed="${townPage === i}" aria-label="${z.name}"></button>`).join("")}</div><button data-town-step="1" aria-label="向右浏览街区">›</button></div><div class="town-quest-float"><div><small>主线 ${state.stage} / 36</small><b>${chapters[Math.floor((state.stage - 1) / 3)]}</b></div><button class="primary" data-tab="adventure">开始冒险</button></div>${homeDrawer ? `<div class="home-drawer"><button class="drawer-close" data-dismiss-drawer aria-label="关闭">×</button>${["welfare", "mail", "achievements"].includes(homeDrawer) ? welfareView(state, homeDrawer) : homeDrawer === "daily" ? dailyView() : `<div class="idle-full">${gameIcon("shield")}<h2>放置宝箱</h2><p>金币 <b id="idle-coins">${idle.coins}</b> · 星钻 <b id="idle-gems">${idle.gems}</b></p><small>最多累积八小时</small><button class="primary" id="claim-idle" ${idle.minutes < 1 ? "disabled" : ""}>领取奖励</button></div>`}</div>` : ""}</div>`;
+    )}</div><div class="town-side-tools"><button data-home-drawer="welfare">${gameIcon("gift")}<small>福利</small>${rewardDots(state).welfare ? "<i>●</i>" : ""}</button><button data-home-drawer="mail">${gameIcon("mail")}<small>邮箱</small>${rewardDots(state).mail ? "<i>●</i>" : ""}</button><button data-home-drawer="daily">${gameIcon("book")}<small>任务</small></button><button data-home-drawer="idle">${gameIcon("shield")}<small>挂机</small>${idle.minutes ? " <i>●</i>" : ""}</button></div><div class="town-travel"><button data-town-step="-1" aria-label="向左浏览街区">‹</button><div>${zones.map((z, i) => `<button data-town-dot="${i}" class="${townPage === i ? "active" : ""}" aria-pressed="${townPage === i}" aria-label="${z.name}"></button>`).join("")}</div><button data-town-step="1" aria-label="向右浏览街区">›</button></div><button class="journey-goal" data-goal="0"><span>下一步</span><b>${growthGoals(state)[0].title}</b><small>${growthGoals(state)[0].detail}</small><em>›</em></button><div class="town-quest-float"><div><small>主线 ${state.stage} / 36</small><b>${chapters[Math.floor((state.stage - 1) / 3)]}</b></div><button class="primary" data-tab="adventure">开始冒险</button></div>${homeDrawer ? `<div class="home-drawer"><button class="drawer-close" data-dismiss-drawer aria-label="关闭">×</button>${["welfare", "mail", "achievements"].includes(homeDrawer) ? welfareView(state, homeDrawer) : homeDrawer === "daily" ? dailyView() : `<div class="idle-full">${gameIcon("shield")}<h2>放置宝箱</h2><p>金币 <b id="idle-coins">${idle.coins}</b> · 星钻 <b id="idle-gems">${idle.gems}</b></p><small>最多累积八小时</small><button class="primary" id="claim-idle" ${idle.minutes < 1 ? "disabled" : ""}>领取奖励</button></div>`}</div>` : ""}</div>`;
 }
 function summonView() {
   return `<div class="summon-stage"><div class="summon-sky">${scenery("night")}</div><div class="screen-caption"><small>STELLAR SUMMON</small><h2>星之祈愿</h2></div><div class="summon-feature">${illustration(heroes[0])}<div class="summon-orbit"></div><span>UR · 月光祭司</span><h2>露米</h2></div><button class="scene-help" data-home-drawer="">?</button><div class="summon-bottom"><span class="pill">${state.pity} / 50 · SSR 保底</span><div class="ticket-count">召唤券 <b>${state.tickets}</b> 张</div><div class="pull-buttons ticket-buttons"><button class="secondary" data-ticket-pull="1" ${state.tickets < 1 ? "disabled" : ""}>券单抽<small>消耗 1 张</small></button><button class="primary" data-ticket-pull="10" ${state.tickets < 10 ? "disabled" : ""}>券十连<small>消耗 10 张 · SR 保底</small></button></div><div class="pull-buttons"><button class="secondary" data-pull="1" ${state.gems < 150 ? "disabled" : ""}>召唤一次<small>✦150</small></button><button class="primary" data-pull="10" ${state.gems < 1500 ? "disabled" : ""}>召唤十次<small>✦1,500 · SR 保底</small></button></div><details class="summon-rules"><summary>概率与英雄图鉴</summary><p>R 70% · SR 24% · SSR 5% · UR 1%，第50抽至少SSR，SSR/UR重置保底。</p><div class="codex-grid">${heroes.map((h) => `<button data-detail="${h.id}" style="--accent:${rarities[h.rarity].color}">${portrait(h)}<small>${h.rarity} · ${h.name}</small></button>`).join("")}</div></details></div></div>`;
@@ -785,7 +796,7 @@ function adventureView() {
     strength = teamPower(state),
     enemies = stageEnemies(state.stage),
     boss = state.stage % 3 === 0;
-  return `${nav}<div class="section-heading"><div><h2>冒险</h2><p>选择地图节点，继续你的冒险</p></div><span class="pill">已通关 ${state.cleared} / ${maxStage}</span></div><label class="chapter-picker">章节地图<select id="chapter-select">${chapters.map((c, i) => `<option value="${i}" ${page === i ? "selected" : ""} ${i * 3 > state.cleared ? "disabled" : ""}>${i + 1}. ${c} ${state.cleared >= i * 3 + 3 ? "✓" : ""}</option>`).join("")}</select></label>${campaignMap(state,page)}<details class="adventure-options"><summary>阵营、支援与敌方信息</summary><p>${boss ? enemies[0].hint : "火克风、风克水、水克火，光暗互克。"}</p>${synergyView()}${supportView()}</details><div class="battle-panel"><div><div class="eyebrow">CHAPTER ${state.stage}</div><h2>第 ${state.stage} 关 · ${boss ? enemies[0].name : chapters[Math.floor((state.stage - 1) / 3)]}</h2><p>队伍战力 <b>${strength}</b> / 敌方战力 <b>${enemyPower(state.stage)}</b></p><p>${boss ? enemies[0].hint : "第三回合释放专属技能；火克风、风克水、水克火，光暗互克。前排保护输出，六人阵容可激活阵营共鸣。"}</p>${teamStrip(state)}</div><button id="fight" class="primary" ${!state.team.length ? "disabled" : ""}>⚔ 开始挑战</button></div><div class="elite-panel"><div><h3>精英远征 · 第 ${state.stage} 关</h3><p>敌人战力 ×1.5 · 首通 ✦150 ◈${600 + state.stage * 20}</p><small>${state.eliteCleared?.includes(state.stage) ? "已首通，重复挑战奖励较少" : "需要先通关对应主线"}</small></div><button class="secondary" data-elite ${state.stage > state.cleared || !state.team.length ? "disabled" : ""}>挑战精英</button></div><div class="tower-panel"><div><h2>星灯试炼塔</h2><p>已通关 ${state.tower || 0} / 30 层 · 每层奖励只可领取一次</p></div><button class="primary" data-tower ${!state.team.length || (state.tower || 0) >= 30 ? "disabled" : ""}>挑战第 ${Math.min(30, (state.tower || 0) + 1)} 层</button></div>${report ? `<div class="battle-result ${report.won ? "win" : "loss"}" role="status"><h2>${report.won ? "✦ 挑战成功！" : "挑战失败"}</h2><p>造成 ${report.dealt} 点伤害。${report.won ? "获得 " + report.reward + " 星钻、" + report.coins + " 金币。" : (report.tips || []).map(esc).join(" ")}</p>${report.won && state.stage < maxStage ? '<button id="next" class="secondary">继续当前关 →</button>' : ""}${report.won && state.stage === maxStage ? "<p>恭喜通关十二章星境！继续挑战精英、试炼塔与公会远征。</p>" : ""}</div>` : ""}`;
+  return `${nav}<div class="journey-objectives">${growthGoals(state).filter(g=>g.tab==='adventure').slice(0,1).map(g=>`<span>${g.title}</span><small>${g.detail}</small>`).join('')}</div><div class="section-heading"><div><h2>冒险</h2><p>选择地图节点，继续你的冒险</p></div><span class="pill">已通关 ${state.cleared} / ${maxStage}</span></div><label class="chapter-picker">章节地图<select id="chapter-select">${chapters.map((c, i) => `<option value="${i}" ${page === i ? "selected" : ""} ${i * 3 > state.cleared ? "disabled" : ""}>${i + 1}. ${c} ${state.cleared >= i * 3 + 3 ? "✓" : ""}</option>`).join("")}</select></label>${campaignMap(state,page)}<details class="adventure-options"><summary>敌人技能与阵容建议</summary><div class="enemy-preview">${enemies.map(e=>`<span><b>${e.name}</b><small>${e.element} · ${e.role}</small><em>${e.hint||'保护前排，集中输出'}</em></span>`).join('')}</div><p>${boss ? enemies[0].hint : "火克风、风克水、水克火，光暗互克。"}</p>${synergyView()}${supportView()}</details><div class="battle-panel"><div><div class="eyebrow">CHAPTER ${state.stage}</div><h2>第 ${state.stage} 关 · ${boss ? enemies[0].name : chapters[Math.floor((state.stage - 1) / 3)]}</h2><p>队伍战力 <b>${strength}</b> / 敌方战力 <b>${enemyPower(state.stage)}</b></p><p>${boss ? enemies[0].hint : "第三回合释放专属技能；火克风、风克水、水克火，光暗互克。前排保护输出，六人阵容可激活阵营共鸣。"}</p>${teamStrip(state)}</div><button id="fight" class="primary" ${!state.team.length ? "disabled" : ""}>⚔ 开始挑战</button></div><div class="elite-panel"><div><h3>精英远征 · 第 ${state.stage} 关</h3><p>敌人战力 ×1.5 · 首通 ✦150 ◈${600 + state.stage * 20}</p><small>${state.eliteCleared?.includes(state.stage) ? "已首通，重复挑战奖励较少" : "需要先通关对应主线"}</small></div><button class="secondary" data-elite ${state.stage > state.cleared || !state.team.length ? "disabled" : ""}>挑战精英</button></div><div class="tower-panel"><div><h2>星灯试炼塔</h2><p>已通关 ${state.tower || 0} / 30 层 · 每层奖励只可领取一次</p></div><button class="primary" data-tower ${!state.team.length || (state.tower || 0) >= 30 ? "disabled" : ""}>挑战第 ${Math.min(30, (state.tower || 0) + 1)} 层</button></div>${report ? `<div class="battle-result ${report.won ? "win" : "loss"}" role="status"><h2>${report.won ? "✦ 挑战成功！" : "挑战失败"}</h2><p>造成 ${report.dealt} 点伤害。${report.won ? "获得 " + report.reward + " 星钻、" + report.coins + " 金币。" : (report.tips || []).map(esc).join(" ")}</p>${report.won && state.stage < maxStage ? '<button id="next" class="secondary">继续下一场挑战 →</button>' : ""}${report.won && state.stage === maxStage ? "<p>恭喜通关十二章星境！继续挑战精英、试炼塔与公会远征。</p>" : ""}</div>` : ""}`;
 }
 function dailyView() {
   const d = dailyState(state);
@@ -1228,9 +1239,10 @@ function showSummon(pulls) {
   );
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const m = modal(
-    `<div class="summon-cinema" style="--accent:${rarities[best.rarity].color}"><div class="cinema-heading"><small>STELLAR SUMMON</small><h2>星门已开启</h2><p>光芒之中，命运与你相遇</p></div><div class="summon-gate"><div class="gate-ring"></div><div class="gate-core">✧</div></div><div class="reveal-grid ${pulls.length === 1 ? "single" : ""}">${pulls.map((h, i) => `<button class="reveal-slot" data-reveal="${i}" aria-label="揭晓第 ${i + 1} 张卡牌"><div class="card-back"><span>✧</span><small>ASTRAL</small></div><div class="card-front">${card(h, true)}</div></button>`).join("")}</div><div class="cinema-actions"><button class="secondary" data-all>全部揭晓</button><button class="primary" data-close>收下伙伴</button></div></div>`,
+    `<div class="summon-cinema" style="--accent:${rarities[best.rarity].color}"><div class="cinema-heading"><small>STELLAR SUMMON</small><h2>伙伴集结</h2><p>获得 ${pulls.length} 位 · 新英雄 ${pulls.filter(h=>h.isNew).length} 位 · 结果已保存</p></div><div class="summon-gate"><div class="gate-ring"></div><div class="gate-core">✧</div></div><div class="reveal-grid ${pulls.length === 1 ? "single" : ""}">${pulls.map((h, i) => `<button class="reveal-slot" data-reveal="${i}" aria-label="揭晓第 ${i + 1} 张卡牌"><div class="card-back"><span>✧</span><small>ASTRAL</small></div><div class="card-front"><span class="pull-kind ${h.isNew?'new':'duplicate'}">${h.isNew?'新英雄':'重复 · 可升星'}</span>${card(h, true)}</div></button>`).join("")}</div><div class="cinema-actions"><button class="secondary" data-all>全部揭晓</button><button class="secondary" data-pull-grow>培养${best.name}</button><button class="primary" data-close>收下伙伴</button></div></div>`,
     "召唤结果",
   );
+  m.dialog.querySelector('[data-pull-grow]').onclick=()=>{m.end();tab='collection';collectionMode='heroes';selectedHero=best.id;heroDetailOpen=true;render();};
   const reveal = (i) => {
     const el = m.dialog.querySelector(`[data-reveal="${i}"]`);
     if (el.classList.contains("revealed")) return;
@@ -1280,7 +1292,7 @@ function showBattle(outcome) {
           ? "ELITE " + outcome.stage
           : "CHAPTER " + (outcome.stage || state.stage);
   const m = modal(
-    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>小队出击</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene("formation-court")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.won ? "VICTORY" : "DEFEAT"}</h2><p>${outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
+    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene("formation-court")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
     "自动战斗与统计",
   );
   m.dialog.classList.add("battle-fullscreen");
@@ -1321,6 +1333,15 @@ function showBattle(outcome) {
       void target.offsetWidth;
       target.classList.add("hit-flash");
     }
+    actor.style.setProperty('--lunge', event.side === 'p' ? '12px' : '-12px');
+    if(event.damage>0 && actor!==target && !reduced) {
+      const a=actor.getBoundingClientRect(),t=target.getBoundingClientRect();
+      const effect=document.createElement('span');effect.className='battle-impact';
+      effect.style.left=(t.left+t.width/2-m.dialog.getBoundingClientRect().left)+'px';
+      effect.style.top=(t.top+t.height/2-m.dialog.getBoundingClientRect().top)+'px';
+      effect.dataset.kind=event.critical?'critical':event.advantage?'advantage':'hit';
+      m.dialog.append(effect);m.after(()=>effect.remove(),350/speed);
+    }
     actor.classList.remove("attacking");
     void actor.offsetWidth;
     actor.classList.add("attacking");
@@ -1345,10 +1366,10 @@ function showBattle(outcome) {
     void number.offsetWidth;
     number.className =
       "unit-damage pop " + (event.heal !== undefined ? "healing" : "");
-    target.classList.toggle("shielded", !!event.shield || !!event.absorbed);
+    target.classList.toggle("shielded", !!event.shieldRemaining);
     target.classList.toggle(
       "controlled",
-      ["control", "stun"].includes(event.status),
+      event.controlled ?? ["control", "stun"].includes(event.status),
     );
     actor.dataset.element =
       units.find((u) => u.unitId === event.actor)?.element || "";
@@ -1359,7 +1380,7 @@ function showBattle(outcome) {
       " " +
       number.textContent;
     m.dialog.querySelector(".round-counter").textContent =
-      "ROUND " + event.round + " · " + event.skill;
+      "第 " + event.round + " 回合 · " + event.skill;
     tone(event.heal ? 660 : event.critical ? 320 : 220, 0.08);
   }
   let index = 0,
