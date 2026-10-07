@@ -641,6 +641,38 @@ test("database accounts, cloud progress, guild cooperation, chat and arena", asy
     assert.equal(restored.state.odyssey.run.node,0);
     assert.deepEqual(restored.state.odyssey.run.team,[8,9,10]);
   });
+  await t.test("weekly routes and task rewards persist through the authoritative transaction", async () => {
+    const account=await call("/register",null,{username:"Voyage",password:"testpass123"});
+    let current=account;
+    const act=async action=>{const cmd={requestId:crypto.randomUUID(),revision:current.revision,action};const r=await call("/action",account.token,cmd);if(r.status===200)current=r;return{r,cmd};};
+    assert.equal((await act({type:"weeklyFight"})).r.status,400);
+    const seeded=structuredClone(account.state);seeded.cleared=3;seeded.stage=4;seeded.team=[0,1,2,3,4,5];seeded.formation=[...seeded.team];for(const id of seeded.team){seeded.collection[id]=1;seeded.levels[id]=50;}
+    sqlite.prepare("UPDATE players SET state_json=? WHERE account_id=?").run(JSON.stringify(seeded),account.user.id);
+    for(let i=0;i<5;i++){const {r,cmd}=await act({type:"weeklyFight"});assert.equal(r.status,200);assert.equal(r.state.odyssey.weekly.floor,i+1);assert.equal((await call("/action",account.token,cmd)).state.odyssey.weekly.floor,i+1);}
+    assert.equal((await act({type:"weeklyFight"})).r.status,400);
+    assert.equal((await act({type:"expeditionStart",tier:1})).r.status,200);
+    const {r,cmd}=await act({type:"expeditionRoute",route:"spring"});assert.equal(r.status,200);assert.equal((await call("/action",account.token,cmd)).state.odyssey.run.route,"spring");
+    assert.equal((await act({type:"expeditionRoute",route:"spring"})).r.status,400);
+    const restored=await call("/login",null,{username:"Voyage",password:"testpass123"});assert.equal(restored.state.odyssey.weekly.floor,5);assert.equal(restored.state.odyssey.run.route,"spring");
+  });
+  await t.test("guild raid uses combat events, caps daily rewards and resumes next day", async () => {
+    const account=await call("/register",null,{username:"Raidcap",password:"testpass123"});
+    await call("/guild/create",account.token,{name:"Raid checks"});let current=await call("/me",account.token);
+    const act=async()=>{const cmd={requestId:crypto.randomUUID(),revision:current.revision,action:{type:"boss"}};const r=await call("/action",account.token,cmd);if(r.status===200)current=r;return r;};
+    for(let i=0;i<5;i++){const r=await act();assert.equal(r.status,200);assert.ok(r.result.events.length>0);assert.ok(r.result.stats.some(x=>x.side==='p'&&x.damage>0));assert.equal(r.state.odyssey.raid.hits,i+1);}
+    const before=structuredClone(current.state);assert.equal((await act()).status,400);assert.deepEqual((await call("/me",account.token)).state,before);
+    before.odyssey.raid.day='2000-01-01';sqlite.prepare("UPDATE players SET state_json=? WHERE account_id=?").run(JSON.stringify(before),account.user.id);
+    assert.equal((await act()).state.odyssey.raid.hits,1);
+  });
+  await t.test("arena presents a close opponent before a much stronger high-rated player", async () => {
+    const self=await call("/register",null,{username:"MatchSelf",password:"testpass123"});
+    const near=await call("/register",null,{username:"MatchNear",password:"testpass123"});
+    const far=await call("/register",null,{username:"MatchFar",password:"testpass123"});
+    const stronger=structuredClone(far.state);for(const id of stronger.team)stronger.levels[id]=50;
+    sqlite.prepare("UPDATE players SET state_json=?,rating=3000 WHERE account_id=?").run(JSON.stringify(stronger),far.user.id);
+    const list=(await call("/arena",self.token)).opponents.map(x=>x.id);
+    assert.ok(list.indexOf(near.user.id)>=0);assert.ok(list.indexOf(far.user.id)>list.indexOf(near.user.id));
+  });
   await t.test("logout revokes session", async () => {
     await call("/logout", eve.token, {});
     assert.equal((await call("/me", eve.token)).status, 401);

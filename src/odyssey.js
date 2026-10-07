@@ -28,13 +28,17 @@ export function validOdyssey(o,s){
  if(!o.milestones.every(n=>num(n,12)&&n>0&&s.cleared>=n*3))return false;
  if(!Object.entries(o.spent).every(([id,v])=>s.collection[id]&&rec(v)&&['coins','experience','books'].every(k=>num(v[k]))&&num(v.baseLevel,50)&&v.baseLevel>=1&&num(v.baseSkill,5)))return false;
  if(typeof o.sweep.day!=='string'||!num(o.sweep.count,10))return false;
+ if(o.raid!==undefined&&(!rec(o.raid)||typeof o.raid.day!=='string'||!num(o.raid.hits,5)))return false;
+ if(o.weekly!==undefined&&(!rec(o.weekly)||typeof o.weekly.week!=='string'||!num(o.weekly.floor,5)))return false;
  const r=o.run;if(r===null)return true;
+ if(r.route!==undefined&&r.route!==null&&!['trail','elite','spring'].includes(r.route))return false;
+ if(r.riskWins!==undefined&&!num(r.riskWins,6))return false;
  return rec(r)&&typeof r.day==='string'&&num(r.tier,3)&&r.tier>0&&num(r.node,6)&&['active','pending','claimed'].every(k=>typeof r[k]==='boolean')&&unique(r.team)&&r.team.length>0&&r.team.length<=6&&r.team.every(id=>num(id,37)&&s.collection[id])&&Array.isArray(r.positions)&&r.positions.length===6&&JSON.stringify(r.positions.filter(id=>id!==null))===JSON.stringify(r.team)&&unique(r.positions.filter(id=>id!==null))&&rec(r.hp)&&Object.keys(r.hp).length===r.team.length&&r.team.every(id=>num(r.hp[id],1000))&&Array.isArray(r.boons)&&r.boons.length<=5&&r.boons.every(id=>boons.some(b=>b.id===id))&&(!r.pending||r.active&&r.node>0&&r.node<6);
 }
 export function recordSpent(s,id,key,amount){const o=ensureOdyssey(s);o.spent[id]??={coins:0,experience:0,books:0,baseLevel:s.levels[id]||1,baseSkill:s.skills[id]||0};o.spent[id][key]+=amount;}
 export function expeditionChoices(run){const seed=[...run.day].reduce((n,c)=>n+c.charCodeAt(0),run.node*7+run.tier);return [0,2,4].map(i=>boons[(seed+i)%boons.length]);}
 export function expeditionReward(tier){return {coins:1200*tier,shards:8*tier,tickets:tier,stones:6*tier};}
-export function expeditionEnemies(run){const theme=trialForDay(run.day),total=55+run.node*32+(run.tier-1)*150;return Array.from({length:run.node===5?1:3},(_,i)=>({name:run.node===5?theme.name+'守门人':['遗迹前锋','遗迹守卫','遗迹术士'][i],kind:run.node===5?2:i,role:run.node===5?'法师':i===1?'骑士':'战士',element:theme.element,power:Math.round(total/(run.node===5?1:3)),skill:theme.name+' · 秘术',ability:{effects:theme.effects,multiplier:1.1},hint:theme.hint}));}
+export function expeditionEnemies(run){const theme=trialForDay(run.day),total=(55+run.node*32+(run.tier-1)*150)*(run.route==='elite'?1.25:run.route==='spring'?1.1:1);return Array.from({length:run.node===5?1:3},(_,i)=>({name:run.node===5?theme.name+'守门人':['遗迹前锋','遗迹守卫','遗迹术士'][i],kind:run.node===5?2:i,phase:run.node===5,role:run.node===5?'法师':i===1?'骑士':'战士',element:theme.element,power:Math.round(total/(run.node===5?1:3)),skill:theme.name+' · 秘术',ability:{effects:theme.effects,multiplier:1.1},hint:theme.hint}));}
 export function odysseyAction(s,a,rng,ctx){
  const o=ensureOdyssey(s),done=result=>({handled:true,result}),day=utcDay();
  if(a.type==='wishlist'){
@@ -82,13 +86,19 @@ export function odysseyAction(s,a,rng,ctx){
   r.boons.push(a.boon);r.pending=false;
   if(['rest','vitality'].includes(a.boon))for(const id of r.team)r.hp[id]=Math.min(1000,r.hp[id]+(a.boon==='rest'?350:180));return done({boon:a.boon});
  }
+ if(a.type==='expeditionRoute'){
+  const r=o.run;if(!r||r.day!==day||!r.active||r.pending||r.route)throw Error('本场路线已经确定或不能选择');
+  if(!['trail','elite','spring'].includes(a.route))throw Error('路线无效');
+  r.route=a.route;if(a.route==='spring')for(const id of r.team)r.hp[id]=Math.min(1000,r.hp[id]+150);
+  return done({route:r.route});
+ }
  if(a.type==='expeditionFight'){
   const r=o.run;if(!r||r.day!==day||!r.active||r.pending||r.node>=6)throw Error('请开始远征或先选择祝福');
   const counts=id=>r.boons.filter(b=>b===id).length;
   const units=ctx.combatTeam({...s,team:r.team,formation:r.positions}).map(u=>({...u,initialFraction:r.hp[u.id]/1000,gearBonus:{...u.gearBonus,attack:(u.gearBonus?.attack||0)+counts('blade')*.12,hp:(u.gearBonus?.hp||0)+counts('vitality')*.18,heal:(u.gearBonus?.heal||0)+counts('spring')*.25,shield:(u.gearBonus?.shield||0)+counts('guard')*.25,crit:(u.gearBonus?.crit||0)+counts('crit')*.08}}));
   const combat=ctx.simulateCombat(units,expeditionEnemies(r),rng);
   for(const u of combat.players)r.hp[u.id]=Math.max(0,Math.round(u.hp/u.maxHp*1000));
-  let loot={};if(combat.won){r.node++;if(r.node<6)r.pending=true;else{r.active=false;if(!r.claimed){loot=expeditionReward(r.tier);s.coins+=loot.coins;s.tickets+=loot.tickets;s.stones+=loot.stones;o.shards+=loot.shards;r.claimed=true;}}}else{r.active=false;r.pending=false;}
+  let loot={};if(combat.won){if(r.route==='elite')r.riskWins=(r.riskWins||0)+1;r.route=null;r.node++;if(r.node<6)r.pending=true;else{r.active=false;if(!r.claimed){loot=expeditionReward(r.tier);loot.coins+=(r.riskWins||0)*200;loot.shards+=(r.riskWins||0)*2;s.coins+=loot.coins;s.tickets+=loot.tickets;s.stones+=loot.stones;o.shards+=loot.shards;r.claimed=true;}}}else{r.active=false;r.pending=false;}
   ctx.dailyState(s).battles++;return done({...combat,expedition:true,node:r.node,loot,reward:0,coins:0});
  }
  return {handled:false};

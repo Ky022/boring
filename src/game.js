@@ -1,3 +1,4 @@
+import { weeklyAction } from './weekly-trial.js';
 import { ensureOdyssey, odysseyAction, recordSpent } from "./odyssey.js";
 import {
   expansionFresh,
@@ -500,6 +501,9 @@ export function applyAction(state, action, rng = Math.random, support = null) {
   expandSave(state);
   const extended = odysseyAction(state,action,rng,{heroes,power,combatTeam,simulateCombat,dailyState});
   if(extended.handled)return extended.result;
+  const week = weeklyAction(state, action, rng, {heroes,combatTeam,simulateCombat,dailyState});
+  if(week.handled)return week.result;
+  if(action.type==='dailyCollect'){const d=dailyState(state),reward={gems:0,coins:0};for(const task of dailyTasks){if(!d.claimed.includes(task.id)&&d[task.key]>=task.goal){d.claimed.push(task.id);reward.gems+=task.gems;reward.coins+=task.coins;}}state.gems+=reward.gems;state.coins+=reward.coins;return reward;}
   const extra = expansionAction(state, action, rng, {
     heroes,
     power,
@@ -956,6 +960,8 @@ export function stageEnemies(stage, elite = false) {
       {
         ...spec,
         kind: 2,
+        phase:chapter>=2,
+        hint:spec.hint+(chapter>=2?" 生命低于50%进入第二阶段，攻击提高15%。":""),
         power: Math.round(total),
         skill: spec.name + " · 秘技",
         ability: { effects: spec.effects, multiplier: 1.35 },

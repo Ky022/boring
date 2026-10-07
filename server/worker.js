@@ -15,6 +15,7 @@ import {
   power,
   simulateCombat,
   combatTeam,
+  dailyState,
 } from "../src/game.js";
 class ApiError extends Error {
   constructor(message, status = 400) {
@@ -271,15 +272,22 @@ async function gameAction(db, user, input) {
     if (!state.team.length) fail("请先编成队伍");
     if (state.coins < 100) fail("挑战需要 100 金币");
     if (guild.bossHp <= 0) fail("守卫已击败，请等待下一轮");
-    const damage = Math.round(teamPower(state) * (0.9 + random() * 0.2)),
-      defeated = damage >= guild.bossHp;
+    const raidDay=new Date().toISOString().slice(0,10);
+    const raids=state.odyssey.raid?.day===raidDay?state.odyssey.raid.hits:0;
+    if(raids>=5)fail("今日5次公会挑战已完成，早上8点刷新");
+    const raidEffects=[["guard","counter"],["freeze"],["burn","drain"]][(guild.bossRound-1)%3];
+    const combat=simulateCombat(combatTeam(state),[{name:"远古星渊守卫",kind:2,power:200+guild.bossRound*35,role:"骑士",element:["风","水","火"][(guild.bossRound-1)%3],phase:true,skill:"星渊秘术",ability:{effects:raidEffects,multiplier:1.2}}],random);
+    const dealt=combat.stats.filter(x=>x.side==='p').reduce((n,x)=>n+x.damage,0);
+    const damage=Math.min(guild.bossHp,Math.max(1,Math.min(Math.round(dealt*.35),Math.round(teamPower(state)*1.4)))),defeated=damage>=guild.bossHp;
+    state.odyssey.raid={day:raidDay,hits:raids+1};
+    dailyState(state).battles++;
     state.coins -= 100;
     state.coins += 150;
     state.gems += defeated ? 200 : 20;
     const hp = defeated
       ? 3000 + guild.bossRound * 1000
       : Math.max(0, guild.bossHp - damage);
-    result = { damage, defeated, reward: defeated ? 200 : 20, coins: 150 };
+    result = {...combat,raid:true,boss:true,damage,defeated,won:true,reward:defeated?200:20,coins:150};
     statements.push(
       stmt(
         db,
@@ -626,11 +634,14 @@ async function route(request, env) {
     return { messages: rows.reverse() };
   }
   if (path === "/api/arena" && method === "GET") {
+    const own=await player(db,user.id);
+    const ownPower=teamPower(own.state);
     const rows = (
       await stmt(
         db,
-        "SELECT a.id,a.username,p.rating,p.state_json FROM accounts a JOIN players p ON p.account_id=a.id WHERE a.id<>? ORDER BY p.rating DESC LIMIT 30",
+        "SELECT a.id,a.username,p.rating,p.state_json FROM accounts a JOIN players p ON p.account_id=a.id WHERE a.id<>? ORDER BY ABS(p.rating-?) ASC,p.updated_ms DESC LIMIT 60",
         user.id,
+        own.rating,
       ).all()
     ).results;
     return {
@@ -643,7 +654,7 @@ async function route(request, env) {
           power: teamPower(state),
           team: state.team.map((id) => heroes[id]),
         };
-      }),
+      }).sort((a,b)=>(Math.abs(a.rating-own.rating)/200+Math.abs(a.power-ownPower)/Math.max(100,ownPower))-(Math.abs(b.rating-own.rating)/200+Math.abs(b.power-ownPower)/Math.max(100,ownPower))).slice(0,30),
       history: (
         await stmt(
           db,

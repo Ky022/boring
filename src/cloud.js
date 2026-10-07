@@ -84,31 +84,35 @@ export async function signIn(mode, username, password) {
   try {
     localStorage.setItem(sessionKey(), cloud.token);
   } catch {}
+  pendingMemory=null;
   return accept(result);
 }
+const pendingKey=()=>sessionKey()+":pending";
+let pendingMemory=null;
+function pending(){try{const p=pendingMemory||JSON.parse(read(pendingKey())||"null");return p?.owner===cloud.token?p:null;}catch{return null;}}
+function keepPending(payload){pendingMemory={owner:cloud.token,payload};try{localStorage.setItem(pendingKey(),JSON.stringify(pendingMemory));}catch{}}
+function clearPending(){pendingMemory=null;try{localStorage.removeItem(pendingKey());}catch{}}
 export async function refreshCloud() {
+  const p=pending();
+  if(p){try{await api("/action",p.payload);clearPending();}catch(e){if(e.status)clearPending();else throw e;}}
   return accept(await api("/me"));
 }
 export async function mutate(action) {
-  const payload = {
-    requestId: crypto.randomUUID(),
-    revision: cloud.revision,
-    action,
-  };
+  if(pending())throw new Error("上一次操作尚未确认，请先刷新云端存档");
+  const payload={requestId:crypto.randomUUID(),revision:cloud.revision,action};
+  keepPending(payload);
   let result;
-  try {
-    result = await api("/action", payload);
-  } catch (e) {
-    if (e.status) throw e;
-    result = await api("/action", payload);
-  }
-  return accept(result);
+  try{
+    try{result=await api("/action",payload);}catch(e){if(e.status)throw e;result=await api("/action",payload);}
+  }catch(e){if(e.status)clearPending();throw e;}
+  clearPending();return accept(result);
 }
 export async function signOut() {
   await api("/logout", {});
   try {
     localStorage.removeItem(sessionKey());
   } catch {}
+  clearPending();
   cloud.token = "";
   cloud.user = null;
   cloud.guild = null;

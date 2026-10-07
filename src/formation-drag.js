@@ -57,7 +57,7 @@ export function wireFormationDrag(ctx, selectPosition) {
       // Quick swipes scroll the roster; hold briefly to pick up a hero.
       if (Math.hypot(e.clientX-pending.x,e.clientY-pending.y)>9) {
         if(pending.source===null){clearTimeout(timer);pending.scrolling=true;pending.roster=screen.querySelector('.inline-formation-roster');pending.scrollTop=pending.roster.scrollTop;e.preventDefault();}
-        else cleanup();
+        else { clearTimeout(timer);start();if(active){e.preventDefault();ghost.style.left=`${e.clientX-32}px`;ghost.style.top=`${e.clientY-64}px`;} }
       }
       return;
     }
@@ -91,7 +91,7 @@ export function wireFormationDrag(ctx, selectPosition) {
     const id = source === null ? Number(node.dataset.pick) : formationPositions(ctx.getState())[source];
     if (id === null || id === undefined) return;
     pending = {node,source,id,x:e.clientX,y:e.clientY,pointerId:e.pointerId};
-    timer = setTimeout(start,180);
+    timer = setTimeout(start,e.target.closest("[data-drag-grip]")?0:140);
     document.addEventListener('pointermove',move,{passive:false});
     document.addEventListener('pointerup',finish);
     document.addEventListener('pointercancel',cancel);

@@ -1,3 +1,6 @@
+import './voyage.css';
+import {wireCamp,wireHeroSwipe} from './camp-life.js';
+import {weeklyView as voyageWeeklyView} from './weekly-ui.js';
 import "./reboot.css";
 import { rebootHome, rebootSummon, rebootCampaign, expeditionView } from "./reboot-ui.js";
 import { growthGoals, summarizePulls } from "./journey.js";
@@ -36,6 +39,7 @@ import {
   stageEnemies,
   formationBonuses,
   combatTeam,
+  simulateCombat,
 } from "./game.js";
 import {
   cloud,
@@ -108,10 +112,12 @@ const esc = (value) =>
       ],
   );
 async function dispatch(action) {
+  $.dataset.saving="true";
   if (cloud.user) {
     if (selectedFriend && ["battle", "elite", "tower"].includes(action.type))
       action = { ...action, supportFriend: selectedFriend };
     const data = await mutate(action);
+    storageWarning="";
     state = migrate(data.state) || data.state;
     return data.result;
   }
@@ -127,13 +133,16 @@ async function run(task) {
     await task();
   } catch (e) {
     notice = e.message;
+    if(cloud.user&&!e.status){storageWarning="连接中断：操作结果待确认，请刷新云端存档后继续。";}
     if (e.status === 409 && cloud.user) {
       try {
         state = (await refreshCloud()).state;
+        storageWarning="";
       } catch {}
     }
   } finally {
     busy = false;
+    delete $.dataset.saving;
     render();
   }
 }
@@ -150,7 +159,11 @@ function revampContext() {
     isBusy: () => busy,
   };
 }
+let stopCamp=()=>{};
+let liteMode=false;try{liteMode=localStorage.getItem("astral-lite-mode")==="1";}catch{}
 function render() {
+  stopCamp();
+  document.body.classList.toggle("lite-mode",liteMode);
   $.classList.toggle('hero-detail-open', tab === 'collection' && collectionMode === 'heroes' && heroDetailOpen);
   $.classList.toggle('hero-gallery-open', tab === 'collection' && collectionMode === 'heroes' && !heroDetailOpen);
   const retainedDetails =
@@ -179,7 +192,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.name||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V3</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V4</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -195,6 +208,12 @@ function render() {
       "",
     )}</nav>${storageWarning ? `<p class="storage-notice">${esc(storageWarning)}</p>` : ""}${notice ? `<div class="game-toast" role="status">${esc(notice)}</div>` : ""}`;
   wireWorld($);
+  stopCamp=wireCamp($,id=>{selectedHero=id;tab="collection";collectionMode="heroes";heroDetailOpen=true;render();},liteMode);
+  wireHeroSwipe($,direction=>$.querySelector(`[data-hero-step="${direction}"]`)?.click());
+  $.querySelectorAll("[data-expedition-route]").forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:"expeditionRoute",route:b.dataset.expeditionRoute});notice="本场路线已确定";}));
+  const weekFight=$.querySelector("[data-weekly-fight]");if(weekFight)weekFight.onclick=()=>run(async()=>{const r=await dispatch({type:"weeklyFight"});showBattle(r);notice=r.won?"本周挑战进度已保存":"可以调整阵容后重试";});
+  const collect=$.querySelector("[data-daily-collect]");if(collect)collect.onclick=()=>run(async()=>{const r=await dispatch({type:"dailyCollect"});notice=`任务领取：${r.gems}星钻 · ${r.coins}金币`;});
+  const lite=$.querySelector("[data-lite-mode]");if(lite)lite.onclick=()=>{liteMode=!liteMode;try{localStorage.setItem("astral-lite-mode",liteMode?"1":"0");}catch{}render();};
   $.querySelectorAll('[data-summon-panel]').forEach(b=>b.onclick=()=>{summonPanel=b.dataset.summonPanel;render();});
   $.querySelectorAll('[data-summon-currency]').forEach(b=>b.onclick=()=>{summonCurrency=b.dataset.summonCurrency;render();});
   $.querySelectorAll('[data-wish]').forEach(b=>b.onclick=()=>run(async()=>{
@@ -294,7 +313,9 @@ function render() {
   $.querySelectorAll('[data-hero-growth]').forEach(b => b.onclick = () => openHero(Number(b.dataset.heroGrowth)));
   $.querySelectorAll('[data-hero-skill]').forEach(b => b.onclick = () => {
     const skill = heroSkills(heroes[selectedHero])[Number(b.dataset.heroSkill)];
-    modal(`<div class="hero-info-dialog">${gameIcon(skill.icon)}<small>英雄技能</small><h2>${skill.name}</h2><p>${skill.text}</p><button class="primary" data-close>关闭</button></div>`, skill.name);
+    const demo=simulateCombat([combatTeam(state).find(u=>u.id===selectedHero)||{...heroes[selectedHero],power:100,position:0}],[{name:"训练木偶",role:"骑士",element:"风",power:180}],()=>.99);
+    const previewEvents=demo.events.filter(e=>e.actor==="p0"&&e.round===3);
+    modal(`<div class="hero-info-dialog"><div class="v-skill-preview">${sprite(heroes[selectedHero])}<span>→</span>${monster(0)}</div><small>技能演示 · 第三回合释放</small><p>${previewEvents.map(e=>esc(e.skill)).filter((v,i,a)=>a.indexOf(v)===i).join(" · ")||"请在战斗中查看技能效果"}</p>${gameIcon(skill.icon)}<small>英雄技能</small><h2>${skill.name}</h2><p>${skill.text}</p><button class="primary" data-close>关闭</button></div>`, skill.name);
   });
   $.querySelectorAll('[data-hero-story]').forEach(b => b.onclick = () => {
     const h = heroes[Number(b.dataset.heroStory)];
@@ -766,12 +787,14 @@ function adventureView() {
     ["expedition", "遗迹远征"],
     ["daily", "日常副本"],
     ["tower", "试炼塔"],
+    ["weekly", "每周"],
   ]
     .map(
       ([k, n]) =>
         `<button data-adventure-mode="${k}" class="${adventureMode === k ? "active" : ""}">${n}</button>`,
     )
     .join("")}</div>`;
+  if (adventureMode === "weekly") return voyageWeeklyView(state,nav);
   if (adventureMode === "expedition") return expeditionView(state,nav);
   if (adventureMode === "daily")
     return `<div class="adventure-subscreen">${nav}${dungeonView(state)}</div>`;
@@ -783,7 +806,7 @@ function adventureView() {
 }
 function dailyView() {
   const d = dailyState(state);
-  return `<section class="daily-board"><div class="section-heading"><div><h2>冒险委托</h2><p>每日早上 8 点刷新 · 马来西亚时间</p></div><button class="primary" data-task="signin" ${d.signed ? "disabled" : ""}>${d.signed ? "✓ 已签到" : "签到 ✦150"}</button></div>${dailyTasks.map((t) => `<div class="daily-task"><div><b>${t.name}</b><small>${Math.min(d[t.key], t.goal)} / ${t.goal} · ✦${t.gems} ◈${t.coins}</small><progress value="${Math.min(d[t.key], t.goal)}" max="${t.goal}"></progress></div><button class="secondary" data-task="${t.id}" ${d.claimed.includes(t.id) || d[t.key] < t.goal ? "disabled" : ""}>${d.claimed.includes(t.id) ? "已领取" : "领取"}</button></div>`).join("")}</section>`;
+  return `<section class="daily-board"><div class="section-heading"><div><h2>冒险委托</h2><button class="secondary" data-daily-collect>领取已完成任务</button><p>每日早上 8 点刷新 · 马来西亚时间</p></div><button class="primary" data-task="signin" ${d.signed ? "disabled" : ""}>${d.signed ? "✓ 已签到" : "签到 ✦150"}</button></div>${dailyTasks.map((t) => `<div class="daily-task"><div><b>${t.name}</b><small>${Math.min(d[t.key], t.goal)} / ${t.goal} · ✦${t.gems} ◈${t.coins}</small><progress value="${Math.min(d[t.key], t.goal)}" max="${t.goal}"></progress></div><button class="secondary" data-task="${t.id}" ${d.claimed.includes(t.id) || d[t.key] < t.goal ? "disabled" : ""}>${d.claimed.includes(t.id) ? "已领取" : "领取"}</button></div>`).join("")}</section>`;
 }
 function openHero(id) {
   const h = heroes[id],
@@ -809,6 +832,7 @@ function openHero(id) {
     `<div class="hero-profile" style="--accent:${rarities[h.rarity].color}">${illustration(h)}<span class="pill">${h.rarity} · ${h.element} · ${h.role} · ${h.faction}</span><h2>${h.name} · ${h.title}</h2><p>${h.story}</p><h3>${h.skill}</h3><p>${roles[h.role]}</p><p class="skill-description">${h.skillDescription}</p><div class="profile-stats"><b>Lv.${level(state, id)}</b><b>⚔ ${power(state, id)}</b><b>${"★".repeat(stars) || "未升星"}</b></div><h3>技能培养 · Lv.${(state.skills[id] || 0) + 1}</h3><p>每次技能培养提高技能强度 6%；三星解锁职业被动：${{ 骑士: "群体护盾", 战士: "吸血", 游侠: "追击", 法师: "破盾", 治疗: "持续恢复" }[h.role]}。</p><div class="hero-growth-actions"><button class="secondary" data-skill-up ${!owned || (state.skills[id] || 0) >= 5 ? "disabled" : ""}>技能升级 · 技能书 ${(state.skills[id] || 0) + 1}</button><button class="secondary" data-exp-use ${!owned || !state.experience || level(state, id) >= 50 ? "disabled" : ""}>经验药剂 +2级 · 剩余 ${state.experience}</button></div><details class="training-reset"><summary>培养重置与返还</summary><p>返还本版本记录的金币、技能书与经验药剂，保留旧版培养基线、星级、角色与装备。</p><button class="secondary" data-training-reset>查看可返还资源</button></details><h3>升星突破 ${stars} / 5</h3>${owned && stars < 5 ? `<div class="growth-preview">⚔ ${before} → <b>${after}</b> <span>+${after - before}</span></div>` : ""}<p>每星 +60 基础战力，扣除重复角色后仍会提升战力。${owned ? `剩余 ${state.collection[id] - 1} 位重复角色` : "尚未招募"}</p><button class="primary" data-star ${!owned || stars >= 5 || state.collection[id] <= cost.copies || state.coins < cost.coins ? "disabled" : ""}>${stars >= 5 ? "已达五星" : `升星 · 重复 ${cost.copies} 位 + ◈${cost.coins}`}</button>${owned && cloud.user ? `<button class="secondary" data-profile-share>${state.supportHero === id ? "✓ 已设为好友支援" : "设为好友支援"}</button>` : ""}<p class="profile-status" role="status"></p><button class="secondary" data-close>返回</button></div>`,
     "英雄详情",
   );
+  m.dialog.classList.add("v-growth-page");
     const reset=m.dialog.querySelector('[data-training-reset]');
   if(reset)reset.onclick=()=>{const paid=state.odyssey.spent[id];const confirm=modal(`<h2>重置${h.name}培养？</h2><p>返还金币 ${paid?.coins||0} · 技能书 ${paid?.books||0} · 药剂 ${paid?.experience||0}</p><p>回到 Lv.${paid?.baseLevel||level(state,id)}、技能 Lv.${(paid?.baseSkill??state.skills[id]??0)+1}；星级和装备保留。</p><button class="secondary" data-reset-confirm ${paid?'':'disabled'}>确认重置</button><button class="primary" data-close>保留当前培养</button>`,'培养重置');confirm.dialog.querySelector('[data-reset-confirm]').onclick=()=>{confirm.end();m.end();run(async()=>{await dispatch({type:'trainingReset',id});notice='培养资源已返还';});};};
   for (const [selector, type] of [
@@ -854,7 +878,7 @@ function openHero(id) {
   };
 }
 function accountView() {
-  return `${accountBanner(cloud.user)}<div class="section-heading"><div><h2>旅人账号</h2><p>游客存档保留在此设备；云端账号使用独立存档，注册从初始队伍开始。</p></div><span class="pill">${cloud.user ? "☁ 云端已连接" : "本地试玩模式"}</span></div><div class="online-panel">${cloud.user ? `<h3>${esc(cloud.user.username)}</h3><p>金币、星钻、角色、装备与关卡进度保存在云端数据库。账号可在朋友手机上重新登录。请保管昵称和密码；当前没有邮件找回功能。</p><p>竞技积分 ${cloud.rating} · 存档版本 ${cloud.revision}</p><button class="secondary" id="refresh-cloud">刷新云端存档</button> <button class="secondary" id="logout">退出账号</button>` : `<div class="auth-intro">${gameIcon("book")}<h3>把星光带到每一台设备</h3><p>${cloud.base ? "服务器已配置，注册后即可使用联网功能。" : "当前公开网站仍是游客版本。数据库上线后，连接服务器即可与朋友一起玩。"}</p></div><form id="auth-form"><label>昵称<input name="username" autocomplete="username" minlength="2" maxlength="20" required placeholder="例如：星海旅人"></label><label>密码<input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" required placeholder="至少 8 个字符，请记好"></label><div class="hero-actions"><button class="primary" name="mode" value="login" ${!cloud.base ? "disabled" : ""}>登录</button><button class="secondary" name="mode" value="register" ${!cloud.base ? "disabled" : ""}>注册新账号</button></div></form>`}<details class="connection-settings"><summary>服务器连接设置</summary><p>这里需要已部署的游戏服务器网址。Cloudflare 网站可以直接自动连接。</p><form id="connect-form"><label>游戏服务器 HTTPS 网址<input name="endpoint" type="url" placeholder="https://astral-cards-online.你的账号.workers.dev" value="${esc(cloud.base)}" required></label><button class="secondary">连接并检查</button></form></details></div>`;
+  return `${accountBanner(cloud.user)}<section class="v-settings"><b>手机体验</b><button class="secondary" data-lite-mode>${liteMode?"轻量模式已开启":"开启轻量模式"}</button><small>减少环境动画与战斗播放；不影响进度和奖励</small></section><div class="section-heading"><div><h2>旅人账号</h2><p>游客存档保留在此设备；云端账号使用独立存档，注册从初始队伍开始。</p></div><span class="pill">${cloud.user ? "☁ 云端已连接" : "本地试玩模式"}</span></div><div class="online-panel">${cloud.user ? `<h3>${esc(cloud.user.username)}</h3><p>金币、星钻、角色、装备与关卡进度保存在云端数据库。账号可在朋友手机上重新登录。请保管昵称和密码；当前没有邮件找回功能。</p><p>竞技积分 ${cloud.rating} · 存档版本 ${cloud.revision}</p><button class="secondary" id="refresh-cloud">刷新云端存档</button> <button class="secondary" id="logout">退出账号</button>` : `<div class="auth-intro">${gameIcon("book")}<h3>把星光带到每一台设备</h3><p>${cloud.base ? "服务器已配置，注册后即可使用联网功能。" : "当前公开网站仍是游客版本。数据库上线后，连接服务器即可与朋友一起玩。"}</p></div><form id="auth-form"><label>昵称<input name="username" autocomplete="username" minlength="2" maxlength="20" required placeholder="例如：星海旅人"></label><label>密码<input name="password" type="password" autocomplete="current-password" minlength="8" maxlength="72" required placeholder="至少 8 个字符，请记好"></label><div class="hero-actions"><button class="primary" name="mode" value="login" ${!cloud.base ? "disabled" : ""}>登录</button><button class="secondary" name="mode" value="register" ${!cloud.base ? "disabled" : ""}>注册新账号</button></div></form>`}<details class="connection-settings"><summary>服务器连接设置</summary><p>这里需要已部署的游戏服务器网址。Cloudflare 网站可以直接自动连接。</p><form id="connect-form"><label>游戏服务器 HTTPS 网址<input name="endpoint" type="url" placeholder="https://astral-cards-online.你的账号.workers.dev" value="${esc(cloud.base)}" required></label><button class="secondary">连接并检查</button></form></details></div>`;
 }
 function loginRequired(title) {
   return `${screenBanner(title,"与朋友一起开启新的冒险",title.includes("竞技")?"arena":"social","town-west")}<div class="online-panel auth-intro">${gameIcon("social")}<h2>${title}</h2><p>登录账号，就能和朋友一起玩，进度也会保存。</p><button class="primary" data-tab="account">前往账号</button></div>`;
@@ -891,12 +915,12 @@ function socialView() {
           `<button data-community-panel="${id}" class="${communityPanel === id ? "active" : ""}">${name}</button>`,
       )
       .join("")}</div><div class="community-body" data-guild-section="boss"><div class="guild-section-tabs"><button data-guild-section="boss" class="active">${gameIcon("arena")}公会 Boss</button><button data-guild-section="tasks">${gameIcon("book")}每周任务</button><button data-guild-section="members">${gameIcon("social")}公会成员</button></div>` +
-    `<div class="section-heading"><div><h2>星海公会</h2><p>分享邀请码，与朋友一起挑战守卫。</p></div><span class="pill">${g ? g.members.length + " / 30 位成员" : "尚未加入公会"}</span></div>${g ? `<div class="guild-banner"><span class="guild-crest">${gameIcon("social")}</span><div><h2>${esc(g.name)}</h2><p>邀请码 <b>${esc(g.code)}</b> <button id="copy-code" class="secondary">复制</button></p><small>所有成员的伤害共同累计，击败后立即开启下一轮。</small></div><button id="leave-guild" class="secondary">退出</button></div><div class="boss-panel"><div class="boss-portrait">${monster(2)}</div><div><small>GUILD RAID · ROUND ${g.bossRound}</small><h3>远古星渊守卫</h3><div class="hp-track"><div class="hp-fill" style="width:${(g.bossHp / g.bossMax) * 100}%"></div></div><p>${g.bossHp.toLocaleString()} / ${g.bossMax.toLocaleString()} HP</p><p>入场 100 金币 · 每次奖励 150 金币 + 20 星钻，最后一击获得 200 星钻。</p></div><button id="boss-attack" class="primary">⚔ 合作挑战</button></div>${weeklyView(g)}<div class="member-list guild-members">${g.members.map((m) => `<div class="guild-member"><div class="member-portraits">${(m.team || []).map((h) => sprite(h)).join("")}</div><b>${esc(m.name)} ${m.id === g.owner ? "♛" : ""}</b><span>战力 ${m.power} · 贡献 ${m.contribution}</span></div>`).join("")}</div>` : `<div class="guild-forms"><form id="create-guild"><h3>创建你的公会</h3><label>公会名称<input name="name" minlength="2" maxlength="20" required placeholder="例如：月光冒险团"></label><button class="primary">创建公会</button></form><form id="join-guild"><h3>加入朋友的公会</h3><label>8 位邀请码<input name="code" minlength="8" maxlength="8" required placeholder="输入朋友的邀请码"></label><button class="secondary">加入公会</button></form></div>`}${friendsView()}<div class="chat-panel"><div class="chat-top"><h3>旅人聊天室</h3><div><button class="secondary ${chatChannel === "world" ? "selected" : ""}" data-channel="world">世界</button><button class="secondary ${chatChannel === "guild" ? "selected" : ""}" data-channel="guild" ${!g ? "disabled" : ""}>公会</button><button id="refresh-chat" class="secondary">刷新</button></div></div><p class="chat-status" role="status">${esc(chatError) || "每 5 秒更新 · 最多显示最近 60 条消息"}</p><div class="chat-messages" aria-live="polite">${messagesHTML()}</div><form id="chat-form"><input name="message" maxlength="300" required placeholder="和朋友说点什么…" aria-label="聊天消息" autocomplete="off"><button class="primary">发送</button></form></div></div></div>`
+    `<div class="section-heading"><div><h2>星海公会</h2><p>分享邀请码，与朋友一起挑战守卫。</p></div><span class="pill">${g ? g.members.length + " / 30 位成员" : "尚未加入公会"}</span></div>${g ? `<div class="guild-banner"><span class="guild-crest">${gameIcon("social")}</span><div><h2>${esc(g.name)}</h2><p>邀请码 <b>${esc(g.code)}</b> <button id="copy-code" class="secondary">复制</button></p><small>所有成员的伤害共同累计，击败后立即开启下一轮。</small></div><button id="leave-guild" class="secondary">退出</button></div><div class="boss-panel"><div class="boss-portrait">${monster(2)}</div><div><small>GUILD RAID · ROUND ${g.bossRound}</small><h3>远古星渊守卫</h3><div class="hp-track"><div class="hp-fill" style="width:${(g.bossHp / g.bossMax) * 100}%"></div></div><p>${g.bossHp.toLocaleString()} / ${g.bossMax.toLocaleString()} HP</p><p>每日5次 · 入场100金币 · 奖励150金币与星钻。<br>轮换护盾、控制、灼烧机制，最后一击额外奖励。</p></div><button id="boss-attack" class="primary" ${state.odyssey.raid?.day===new Date().toISOString().slice(0,10)&&state.odyssey.raid.hits>=5?'disabled':''}>合作挑战 · 今日 ${state.odyssey.raid?.day===new Date().toISOString().slice(0,10)?state.odyssey.raid.hits:0}/5</button></div>${weeklyView(g)}<div class="member-list guild-members">${g.members.map((m) => `<div class="guild-member"><div class="member-portraits">${(m.team || []).map((h) => sprite(h)).join("")}</div><b>${esc(m.name)} ${m.id === g.owner ? "♛" : ""}</b><span>战力 ${m.power} · 贡献 ${m.contribution}</span></div>`).join("")}</div>` : `<div class="guild-forms"><form id="create-guild"><h3>创建你的公会</h3><label>公会名称<input name="name" minlength="2" maxlength="20" required placeholder="例如：月光冒险团"></label><button class="primary">创建公会</button></form><form id="join-guild"><h3>加入朋友的公会</h3><label>8 位邀请码<input name="code" minlength="8" maxlength="8" required placeholder="输入朋友的邀请码"></label><button class="secondary">加入公会</button></form></div>`}${friendsView()}<div class="chat-panel"><div class="chat-top"><h3>旅人聊天室</h3><div><button class="secondary ${chatChannel === "world" ? "selected" : ""}" data-channel="world">世界</button><button class="secondary ${chatChannel === "guild" ? "selected" : ""}" data-channel="guild" ${!g ? "disabled" : ""}>公会</button><button id="refresh-chat" class="secondary">刷新</button></div></div><p class="chat-status" role="status">${esc(chatError) || "每 5 秒更新 · 最多显示最近 60 条消息"}</p><div class="chat-messages" aria-live="polite">${messagesHTML()}</div><form id="chat-form"><input name="message" maxlength="300" required placeholder="和朋友说点什么…" aria-label="聊天消息" autocomplete="off"><button class="primary">发送</button></form></div></div></div>`
   );
 }
 function arenaView() {
   if (!cloud.user) return loginRequired("星辉竞技场");
-  return `${screenBanner("星辉竞技场","挑战其他旅人的小队，争夺竞技荣誉","arena","town-west")}<div class="section-heading"><div><h2>星辉竞技场</h2><p>挑战其他玩家保存的小队，赢取竞技积分。</p></div><span class="pill">积分 ${cloud.rating} · UTC 每日 5 次</span></div><p>当前队伍战力 ${teamPower(state)} · 今日已挑战 ${state.arenaDay === new Date().toISOString().slice(0, 10) ? state.arenaAttempts : 0} / 5 · 胜利奖励 200 金币，失败也获得 80 金币。</p><button class="secondary" id="refresh-arena">刷新对手</button><p class="arena-ranking-note">对手按竞技积分排名 · 最多显示 30 位旅人</p><div class="arena-list">${socialData.opponents.length ? socialData.opponents.map((o, index) => `<article><div class="opponent-team">${o.team.map((h) => portrait(h)).join("")}</div><div><h3>#${index + 1} ${esc(o.name)}</h3><p>战力 ${o.power} · 积分 ${o.rating}</p></div><button class="primary" data-duel="${esc(o.id)}">挑战</button></article>`).join("") : "<p>暂无对手，请邀请朋友注册账号，再刷新。</p>"}</div><h3 class="section-title">最近对战</h3><div class="member-list">${socialData.history.map((h) => `<div><b>${h.won ? "胜利" : "落败"} · ${esc(h.opponent)}</b><span>${h.dealt} vs ${h.target} · 金币 +${h.coins}</span></div>`).join("") || "<p>还没有对战记录。</p>"}</div>`;
+  return `${screenBanner("星辉竞技场","挑战其他旅人的小队，争夺竞技荣誉","arena","town-west")}<div class="section-heading"><div><h2>星辉竞技场</h2><p>挑战其他玩家保存的小队，赢取竞技积分。</p></div><span class="pill">积分 ${cloud.rating} · UTC 每日 5 次</span></div><p>当前队伍战力 ${teamPower(state)} · 今日已挑战 ${state.arenaDay === new Date().toISOString().slice(0, 10) ? state.arenaAttempts : 0} / 5 · 胜利奖励 200 金币，失败也获得 80 金币。</p><button class="secondary" id="refresh-arena">刷新对手</button><p class="arena-ranking-note">优先匹配接近你战力与积分的对手 · 最多显示30位</p><div class="arena-list">${socialData.opponents.length ? socialData.opponents.map((o, index) => `<article><div class="opponent-team">${o.team.map((h) => portrait(h)).join("")}</div><div><h3>#${index + 1} ${esc(o.name)}</h3><p>战力 ${o.power} · 积分 ${o.rating}</p></div><button class="primary" data-duel="${esc(o.id)}">挑战</button></article>`).join("") : "<p>暂无对手，请邀请朋友注册账号，再刷新。</p>"}</div><h3 class="section-title">最近对战</h3><div class="member-list">${socialData.history.map((h) => `<div><b>${h.won ? "胜利" : "落败"} · ${esc(h.opponent)}</b><span>${h.dealt} vs ${h.target} · 金币 +${h.coins}</span></div>`).join("") || "<p>还没有对战记录。</p>"}</div>`;
 }
 async function loadSocial(repaint = true) {
   if (!cloud.user) return;
@@ -930,6 +954,7 @@ async function loadSocial(repaint = true) {
   } catch (e) {
     chatError = e.message;
     notice = e.message;
+    if(cloud.user&&!e.status){storageWarning="连接中断：操作结果待确认，请刷新云端存档后继续。";}
     if (repaint) render();
   }
 }
@@ -993,6 +1018,7 @@ function wireOnline() {
     refresh.onclick = () =>
       run(async () => {
         state = (await refreshCloud()).state;
+        storageWarning="";
         notice = "已载入最新云端存档";
       });
   const create = $.querySelector("#create-guild");
@@ -1042,6 +1068,7 @@ function wireOnline() {
     attack.onclick = () =>
       run(async () => {
         const result = await dispatch({ type: "boss" });
+        showBattle(result);
         notice = `造成 ${result.damage} 点伤害！${result.defeated ? "守卫击败，新一轮已开启。" : ""}获得 ${result.reward} 星钻、150 金币`;
       });
   $.querySelectorAll("[data-channel]").forEach(
@@ -1222,7 +1249,7 @@ function showSummon(pulls) {
       ? a
       : b,
   );
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches;
   const m = modal(
     `<div class="summon-cinema" style="--accent:${rarities[best.rarity].color}"><div class="cinema-heading"><small>STELLAR SUMMON</small><h2>伙伴集结</h2><p>获得 ${pulls.length} 位 · 新英雄 ${pulls.filter(h=>h.isNew).length} 位 · 结果已保存</p></div><div class="summon-gate"><div class="gate-ring"></div><div class="gate-core">✧</div></div><div class="reveal-grid ${pulls.length === 1 ? "single" : ""}">${pulls.map((h, i) => `<button class="reveal-slot" data-reveal="${i}" aria-label="揭晓第 ${i + 1} 张卡牌"><div class="card-back"><span>✧</span><small>ASTRAL</small></div><div class="card-front"><span class="pull-kind ${h.isNew?'new':'duplicate'}">${h.isNew?'新英雄':'重复 · 可升星'}</span>${card(h, true)}</div></button>`).join("")}</div><div class="cinema-actions"><button class="secondary" data-all>全部揭晓</button><button class="secondary" data-pull-grow>培养${best.name}</button><button class="primary" data-close>收下伙伴</button></div></div>`,
     "召唤结果",
@@ -1258,7 +1285,7 @@ function combatStatsView(outcome) {
   return `<section class="combat-stats"><h3>本队战斗统计</h3>${side("p")}<details><summary>敌方战斗统计</summary>${side("e")}</details>${outcome.tips?.length ? `<div class="battle-advice"><h3>阵容建议</h3><ul>${outcome.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}</section>`;
 }
 function showBattle(outcome) {
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches;
   let speed = 1;
   try {
     speed = Number(localStorage.getItem("astral-combat-speed")) || 1;
@@ -1277,7 +1304,7 @@ function showBattle(outcome) {
           ? "ELITE " + outcome.stage
           : "CHAPTER " + (outcome.stage || state.stage);
   const m = modal(
-    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene("formation-court")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
+    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene("formation-court")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.raid?"贡献已记录":outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.raid?`共同首领伤害 ${outcome.damage} · ${outcome.defeated?"首领击败！":"伙伴们继续加油。"}`:outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : outcome.raid?"公会":tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
     "自动战斗与统计",
   );
   m.dialog.classList.add("battle-fullscreen");
@@ -1328,6 +1355,7 @@ function showBattle(outcome) {
       effect.dataset.kind=event.critical?'critical':event.advantage?'advantage':'hit';
       m.dialog.append(effect);m.after(()=>effect.remove(),350/speed);
     }
+    actor.dataset.action=event.heal?"heal":event.shield?"guard":caster?.role==="法师"?"cast":caster?.role==="游侠"?"shoot":"strike";
     actor.classList.remove("attacking");
     void actor.offsetWidth;
     actor.classList.add("attacking");
