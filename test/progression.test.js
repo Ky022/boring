@@ -222,3 +222,19 @@ test("independent empty formation slots, swaps and presets preserve rear positio
   bad.team = [8, 10];
   assert.equal(validSave(bad), false);
 });
+
+test('ten ticket summons consume ten tickets, preserve gems and guarantee SR', () => {
+  const s = fresh(); s.tickets = 10; s.gems = 0;
+  const draws = applyAction(s, {type:'ticketSummon',count:10}, () => .99);
+  assert.equal(draws.length,10);
+  assert.equal(draws[9].rarity,'SR');
+  assert.equal(s.tickets,0); assert.equal(s.gems,0);
+  assert.equal(s.daily.summons,10); assert.ok(validSave(s));
+});
+test('insufficient or invalid ticket batch leaves save unchanged', () => {
+  for (const count of [10,0,2,-1,'10']) {
+    const s=fresh(); s.tickets=9; const before=structuredClone(s);
+    assert.throws(()=>act(s,{type:'ticketSummon',count}));
+    assert.deepEqual(s,before);
+  }
+});

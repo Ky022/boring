@@ -320,11 +320,12 @@ export function migrate(s) {
       : s;
   return validSave(next) ? expandSave(next) : null;
 }
-export function summon(state, count, rng = Math.random) {
-  if (![1, 10].includes(count) || state.gems < count * 150)
+export function summon(state, count, rng = Math.random, currency = "gems") {
+  if (![1, 10].includes(count) || (currency === "tickets" ? state.tickets < count : state.gems < count * 150))
     throw new Error("星钻不足");
   dailyState(state).summons += count;
-  state.gems -= count * 150;
+  if (currency === "tickets") state.tickets -= count;
+  else state.gems -= count * 150;
   const result = [];
   for (let i = 0; i < count; i++) {
     state.pity++;
@@ -524,9 +525,7 @@ export function applyAction(state, action, rng = Math.random, support = null) {
     case "tower":
       return towerBattle(state, rng, support);
     case "ticketSummon": {
-      state.tickets--;
-      state.gems += 150;
-      return summon(state, 1, rng);
+      return summon(state, action.count ?? 1, rng, "tickets");
     }
     case "summon":
       return summon(state, action.count, rng);

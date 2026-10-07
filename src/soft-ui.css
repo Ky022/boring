@@ -1,0 +1,226 @@
+/* Shared mobile game skin: quiet paper surfaces, compact controls and visible heroes. */
+:root { --paper:#f5f0e6; --surface:#fcf8f0; --soft:#e8e2d7; --ink:#49453f; --muted:#746f65; --line:#cbc3b5; --gold:#d9ac58; --panel:var(--surface); --edge:var(--line); color:var(--ink); font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif; }
+body { background:#ddd9d0; }
+#app[data-screen] { color:var(--ink); background:var(--paper); }
+#app[data-screen] button,dialog.cinematic button { text-shadow:none; box-shadow:none; font-family:inherit; }
+button:hover:not(:disabled) { transform:none; }
+button:active:not(:disabled) { transform:translateY(1px); }
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible { outline:2px solid #72918b; outline-offset:2px; }
+#app[data-screen] .primary,dialog.cinematic .primary { background:#f1cf88; color:#4d422d; border:1px solid #c4a46c; border-radius:6px; box-shadow:0 2px 0 #bda57840; font-weight:700; }
+#app[data-screen] .secondary,dialog.cinematic .secondary { background:#e9e5dc; color:var(--ink); border:1px solid var(--line); border-radius:6px; }
+#app[data-screen] .selected,#app[data-screen] .secondary.selected,dialog.cinematic .secondary.selected { background:#dce8e2; border-color:#8ba69a; color:#3d5d50; }
+#app[data-screen] input,#app[data-screen] select,dialog.cinematic input,dialog.cinematic select { background:#fcf9f3; color:var(--ink); border:1px solid var(--line); border-radius:5px; }
+#app[data-screen] p,dialog.cinematic p { color:var(--muted); line-height:1.55; }
+#app[data-screen] h2,#app[data-screen] h3,dialog.cinematic h2,dialog.cinematic h3 { color:var(--ink); letter-spacing:0; }
+#app[data-screen] .muted,dialog.cinematic .muted,#app[data-screen] .eyebrow { color:var(--muted); }
+#app[data-screen] .pill,dialog.cinematic .pill { background:#e8e3d8 !important; color:#62594a !important; border:1px solid var(--line) !important; border-radius:5px; }
+.game-icon,.painted-icon { filter:none; }
+.game-icon { color:#766b58; }
+#app:not(.hero-detail-open) > .game-hud { height:calc(52px + env(safe-area-inset-top)); background:#eee8dc; border-bottom:1px solid var(--line); color:var(--ink); }
+#app:not(.hero-detail-open) .game-hud .wallet,#app:not(.hero-detail-open) .game-hud .coin-wallet { background:#ded8cc; border:1px solid #c7beb0; border-radius:6px; color:#49453e; height:28px; }
+#app:not(.hero-detail-open) .player-avatar { border:1px solid #a99c86; background:#dad8c9; }
+#app:not(.hero-detail-open) .sound-toggle,#app:not(.hero-detail-open) .fullscreen-button { background:#e7e0d3; border:1px solid var(--line); color:#6a6254; }
+.coin-mark { color:#bb964d; font-size:21px; line-height:1; }
+#app[data-screen] .game-dock { background:#eee8dd; border-top:1px solid #bfb6a7; gap:0; padding:3px 3px calc(3px + env(safe-area-inset-bottom)); }
+#app[data-screen] .game-dock button { color:#756c5c; border-right:1px solid #d4cbba; background:none; }
+#app[data-screen] .game-dock button:last-child { border-right:0; }
+#app[data-screen] .game-dock button.active { background:#f3dcaa; color:#51452f; border:0; border-radius:5px; }
+#app[data-screen] .game-dock button.active:before { display:none; }
+#app[data-screen] .game-dock button .game-icon { width:31px; height:32px; }
+#app[data-screen] .game-dock button small { font-size:11px; text-shadow:none; }
+#app[data-screen] .scene-tabs,#app[data-screen] .hero-gallery .scene-tabs { background:#e4ded3; border-bottom:1px solid var(--line); min-height:38px; height:38px; padding:3px 7px; gap:5px; }
+#app[data-screen] .scene-tabs button,#app[data-screen] .hero-gallery .scene-tabs button { border:0; background:transparent; color:#756b5e; border-radius:5px; font-size:12px; }
+#app[data-screen] .scene-tabs button.active,#app[data-screen] .hero-gallery .scene-tabs button.active { background:#f9f3e6; color:#4e473d; box-shadow:inset 0 -2px #bba479; border:0; }
+#app[data-screen] .screen-panel,#app[data-screen] .home-drawer,dialog.cinematic { background:var(--paper); color:var(--ink); border:1px solid var(--line); box-shadow:none; border-radius:8px; }
+#app[data-screen] .world-banner { height:79px; min-height:79px; border-bottom:1px solid var(--line); background:#e2e7df; }
+.world-banner .world-scene { opacity:.22; }
+.world-banner .banner-scrim { background:linear-gradient(90deg,#ebece5ee,#ebece580); }
+#app[data-screen] .world-banner-title { bottom:12px; left:12px; gap:8px; text-shadow:none; }
+#app[data-screen] .world-banner-title h2 { font-size:18px; color:var(--ink); margin:0 0 3px; }
+#app[data-screen] .world-banner-title p { color:#696f61; font-size:11px; }
+.world-banner-title > .game-icon { width:32px; height:32px; }
+/* All three swipeable districts share a modest town rather than a monument. */
+.fullscreen-town { background:#c5d2bd; }
+.fullscreen-town .world-scene img { object-fit:cover; object-position:center; }
+.town-district:after { background:linear-gradient(#ffffff12,transparent 85%,#60584415); }
+.sanctum-region-label { color:#4c5645; background:#f4eedbdc; padding:4px 8px; border-radius:4px; text-shadow:none; font-size:11px; letter-spacing:0; }
+.sanctum-growth-banner { display:none; }
+#app[data-screen] .fullscreen-town .scene-building,#app[data-screen] .fullscreen-town .scene-building.primary-building { width:29%; height:24%; }
+#app[data-screen] .fullscreen-town .scene-building b { background:#534e43e6; border:1px solid #807867; color:#faf6e9; border-radius:4px; padding:4px 9px; font-size:11px; text-shadow:none; box-shadow:none; }
+.scene-building b span { color:#ddd4c4; }
+#app[data-screen] .town-side-tools button { width:40px; height:49px; background:#f4eddde8; border:1px solid #c2b79e; border-radius:6px; }
+#app[data-screen] .town-side-tools button:nth-child(1) { left:auto; right:7px; top:12px; }
+#app[data-screen] .town-side-tools button:nth-child(2) { right:7px; top:67px; }
+#app[data-screen] .town-side-tools button:nth-child(3) { right:7px; top:122px; }
+#app[data-screen] .town-side-tools button:nth-child(4) { left:7px; top:12px; }
+.town-side-tools .game-icon { width:26px; height:27px; margin:2px auto 0; display:block; }
+#app[data-screen] .town-side-tools small { color:#625846; text-shadow:none; font-size:10px; margin:0; }
+.town-side-tools i { color:#d46b5c; text-shadow:none; }
+.fullscreen-town .street-party { bottom:19%; left:9%; width:82%; height:82px; }
+.fullscreen-town .street-party small { background:#f3eed9dd; color:#4e5445; text-shadow:none; border:0; }
+.town-travel > button { background:#f4eed7c9; color:#665e4e; border:1px solid #c5bca7; border-radius:5px; width:26px; height:36px; }
+.town-travel > div { top:auto; bottom:65px; background:#f5eddbb3; }
+.town-travel [data-town-dot] { background:#a7a28f; border:0; }.town-travel [data-town-dot].active { background:#6d897d; }
+.fullscreen-town .town-quest-float { background:#f6efdfed; border:1px solid #c5bca7; border-radius:7px; box-shadow:none; color:var(--ink); }
+#app[data-screen] .town-quest-float small,#app[data-screen] .town-quest-float b { color:#5d584b; }
+#app[data-screen] .town-quest-float .primary { background:#f1cf88; color:#4d422d; border:1px solid #c4a46c; }
+/* Keep the approved four-column sprites, simplify the frame and labels. */
+#app[data-screen] .hero-gallery { background:var(--paper); color:var(--ink); }
+.gallery-heading { min-height:49px; padding:5px 10px; border-bottom:1px solid var(--line); }
+.gallery-heading span { display:none; }.gallery-heading h2 { font-size:16px; }.gallery-heading > b { font:700 18px system-ui; color:#746957; }
+.gallery-heading > button { background:#e5dfd3; border:1px solid var(--line); border-radius:5px; }
+.hero-gallery-grid { padding:8px; gap:8px 6px; }
+.hero-tile { border:1px solid #c6beb1; border-top:2px solid var(--rarity); border-radius:6px; overflow:hidden; background:#eee5d3; filter:none; aspect-ratio:100/150; }
+.hero-tile:hover { filter:none; }.hero-card-frame,.tile-pedestal,.tile-interior:after { display:none; }
+.tile-interior { inset:0; background:linear-gradient(#f4eddf,#e4dbc9); border-radius:5px; }
+.tile-level { text-align:right; top:4px; right:5px; font:10px system-ui; color:#504c44; text-shadow:none; }
+.hero-tile > .element-seal { top:3px; left:3px; width:18px; height:18px; }
+.tile-character { inset:20px 2px 28px; }
+.tile-name { left:1px; right:1px; bottom:15px; background:transparent; color:#544a3e; border:0; text-shadow:none; font-size:9px; }
+.tile-deployed,.tile-support { left:0; bottom:33px; padding:2px 5px; border-radius:0 4px 4px 0; clip-path:none; background:#739a80; text-shadow:none; }
+.hero-stars { color:#bb933e; text-shadow:none; font-size:11px; letter-spacing:-1px; }
+.element-seal { border:1px solid #c2beae; box-shadow:none; background:var(--element); }
+.gallery-controls,.gallery-bottom-tabs { background:#ede7dc; border-top:1px solid var(--line); }
+.element-filters > button { background:#e5dfd3; border:1px solid var(--line); }
+.element-filters > button.active { background:#f1dcaf; outline:1px solid #bca16a; box-shadow:none; }
+.gallery-bottom-tabs button.active { background:#f6efe0; box-shadow:inset 0 -2px #b59c73; color:#675842; }
+/* Sharp full-resolution portraits stay intact, with quieter overlays. */
+.dossier-nameplate { clip-path:none; border:1px solid #b8ae9c; border-radius:6px; background:#4c4941de; text-shadow:none; }
+.dossier-stars { text-shadow:0 1px #65543b; font-size:20px; }
+.dossier-side-tools button,.dossier-back { background:#eee8d9ee; border:1px solid #b9af9d; color:#655b48; border-radius:6px; box-shadow:none; }
+.dossier-stats { background:#ded9cf; border:1px solid #bfb6a8; color:#4a453c; border-radius:5px; }
+.dossier-actions,.dossier-footer { background:#eee7da; border-color:#c7beaf; }
+.dossier-footer button { color:#605848; text-shadow:none; }.dossier-power { text-shadow:0 1px 2px #473a29; }
+.skill-medallion { box-shadow:none; border-width:1px; }
+/* Formation touch controls and drop feedback. */
+.reference-formation { background:var(--paper); }
+.reference-formation .formation-scene .world-scene img { filter:saturate(.65) brightness(1.05); }
+.reference-formation .formation-vs { background:#e9e5dcf2; color:#554d42; border-bottom:1px solid var(--line); }
+.reference-formation .formation-vs > b { background:#a87d6f; width:33px; height:33px; font-size:15px; padding-top:6px; clip-path:none; border-radius:0 0 5px 5px; }
+.formation-selection { background:#e0e8df; color:#4e6658; border-bottom:1px solid #c1cebf; font-size:10px; min-height:28px; flex-wrap:wrap; gap:2px; }.formation-selection span { color:#647666; font-size:9px; }
+#app[data-screen] .reference-formation .inline-formation-picker { background:var(--paper); border-top:1px solid var(--line); height:235px; }
+#app[data-screen] .reference-formation .inline-formation-roster { grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; padding:7px; }
+#app[data-screen] .reference-formation .formation-card { height:92px; border:1px solid #c6beaf; border-top:2px solid var(--rarity); border-radius:5px; background:#eee6d7; }
+#app[data-screen] .reference-formation .formation-card small { color:#5a5144; text-shadow:none; }
+#app[data-screen] .reference-formation .formation-card .formation-check { inset:auto 3px 13px auto; font:700 17px system-ui; width:21px; height:21px; border-radius:50%; background:#74a67a; color:white; text-shadow:none; transform:none; }
+#app[data-screen] .reference-formation .formation-card > em { color:#b59142; text-shadow:none; }
+#app[data-screen] .reference-formation .inline-picker-heading,.formation-bottom { border-top:1px solid var(--line); background:#ede7dc; }
+.formation-power span,.formation-power span:last-child { color:#68594a; background:#e2dbceec; font-size:9px; }.formation-power b { font:700 12px system-ui; }
+.formation-elements button.active { background:#eddbb4; box-shadow:0 0 0 1px #bda26b; }
+.formation-slots [data-position],.formation-card { touch-action:pan-y; user-select:none; -webkit-user-select:none; }
+body.formation-dragging,body.formation-dragging * { cursor:grabbing !important; }
+.formation-drag-ghost { position:fixed; z-index:1000; width:65px; height:82px; pointer-events:none; opacity:.9; border-radius:6px; background:#f7efd8de; border:1px solid #93af98; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 8px #45463830; }
+.formation-drag-ghost .hero-art { width:60px; height:72px !important; }
+#app[data-screen] .formation-slots .drop-target { background:#d4e9d390; border-radius:7px; outline:2px dashed #78977b; outline-offset:-3px; }
+#app[data-screen] .inline-formation-picker.drop-remove { outline:2px dashed #bc8475; outline-offset:-3px; }
+/* Adventure, daily dungeons and equipment share small paper cards. */
+#app[data-screen=adventure] #content,#app[data-screen=arena] #content,#app[data-screen=account] #content { background:var(--paper); color:var(--ink); }
+#app[data-screen] .chapter-picker,#app[data-screen] .battle-panel,#app[data-screen] .adventure-options,#app[data-screen] .elite-panel,#app[data-screen] .tower-panel,#app[data-screen] .synergy-panel,#app[data-screen] .support-picker { background:#ede8dd; border:1px solid var(--line); border-radius:6px; color:var(--ink); }
+#app[data-screen] .world-route { border:1px solid #b8bcab; border-radius:7px; }
+#app[data-screen] .route-node .game-icon { border:1px solid #b4aa89; background:#f1e9cd; box-shadow:0 2px 0 #777d6550; }
+#app[data-screen] .route-node.current .game-icon { animation:none; outline:2px solid #f1d58b; outline-offset:2px; box-shadow:none; }
+#app[data-screen] .dungeon-card { background:#f9f5ec; border:1px solid var(--line); border-left:3px solid var(--accent); box-shadow:none; border-radius:6px; padding:10px; }
+#app[data-screen] .dungeon-emblem { width:46px; height:46px; border:1px solid #c6c1b2; background:#e7e9dc; border-radius:7px; }.dungeon-emblem .game-icon { width:30px; height:30px; }
+#app[data-screen] .equipment-card,#app[data-screen] .equipment-choice,dialog.cinematic .equipment-choice,#app[data-screen] .shop-slots button,dialog.cinematic .six-equipment button { background:#f9f5ec; border:1px solid var(--line); border-radius:5px; color:#575044; box-shadow:none; }
+#app[data-screen] .bag-item-art { background:#eae5d8; border:1px solid #cec5b4; border-radius:5px; }
+#app[data-screen] .set-guide,#app[data-screen] .forge-panel-tabs { background:#e8e5db; border-color:var(--line); }
+#app[data-screen] .forge-panel-tabs button.active,#app[data-screen] .welfare-tabs button.active,#app[data-screen] .guild-section-tabs button.active { background:#dce6df; color:#4d6756; border-color:#b0c0b2; }
+#app[data-screen] .shop-slots button small,#app[data-screen] .equipment-card small,dialog.cinematic .equipment-choice small { color:#746d61; }
+/* Welfare, mail, achievements and idle rewards. */
+#app[data-screen] .reward-entry,#app[data-screen] .daily-task,#app[data-screen] .signin-calendar > div { background:#fbf7ef; border:1px solid var(--line); border-radius:6px; color:var(--ink); padding:10px; }
+#app[data-screen] .reward-entry h3,#app[data-screen] .daily-task b { color:#514b41; font-size:14px; }
+#app[data-screen] .reward-entry small,#app[data-screen] .daily-task small { color:#776f60; }
+#app[data-screen] .reward-tile { background:#ece7dc; border:1px solid #cec5b4; border-radius:5px; width:55px; }
+#app[data-screen] .reward-tile b,#app[data-screen] .reward-tile small { color:#695d49; }.reward-tile .game-icon { width:25px; height:25px; }
+#app[data-screen] .signin-calendar > div { padding:5px 2px; }.signin-calendar .signed { background:#dde9de !important; }
+progress { accent-color:#85a187; }
+/* Social pages and account keep readable messages and modest illustration headers. */
+#app[data-screen] .community-screen { background:var(--paper); }
+#app[data-screen] .community-scene { height:84px; min-height:84px; }.community-scene:after { background:#596d5270; }
+#app[data-screen] .community-scene > h2 { margin-top:38px; font-size:18px; color:#fff8e8; }
+#app[data-screen] .guild-banner,#app[data-screen] .boss-panel,#app[data-screen] .weekly-panel,#app[data-screen] .guild-forms form,#app[data-screen] .guild-member,#app[data-screen] .friend-card,#app[data-screen] .arena-list article,#app[data-screen] .member-list > div { background:#faf6ed; border:1px solid var(--line); border-radius:6px; box-shadow:none; color:var(--ink); }
+#app[data-screen] .boss-portrait,#app[data-screen] .friend-portrait { background:#e1e6da; border:1px solid #c5c8b9; border-radius:6px; }
+#app[data-screen] .chat-panel { background:#f7f3e9; border:1px solid var(--line); border-radius:6px; }
+#app[data-screen] .chat-messages { background:#eeeae0; border:0; border-radius:5px; }
+#app[data-screen] .chat-message { background:#fcf9f2; border:1px solid #d3cbbc; color:#514b42; border-radius:6px; }
+#app[data-screen] .chat-message.mine { background:#dce9df; border-color:#c0d1c1; }
+#app[data-screen] .chat-message b,#app[data-screen] .chat-message p { color:#504c43 !important; }#app[data-screen] .chat-message time { color:#857d70; }
+#app[data-screen] #chat-form { background:transparent; }
+#app[data-screen] .connection-settings { border-top:1px solid var(--line); }
+/* Summoning uses calm blue accents; rarity effects only appear during reveals. */
+#app[data-screen] .summon-stage { background:#d3dfdf; }
+#app[data-screen] .summon-sky { opacity:.12; }
+#app[data-screen] .summon-orbit { display:none; }
+#app[data-screen] .summon-stage .screen-caption { top:10px; }.summon-stage .screen-caption small { display:none; }
+#app[data-screen] .summon-stage .screen-caption h2 { font-size:18px; color:#445557; text-shadow:none; }
+#app[data-screen] .summon-feature { inset:43px 0 205px; }
+#app[data-screen] .summon-feature h2 { font-size:18px; color:#4b5554; text-shadow:none; }
+#app[data-screen] .summon-feature > span:not(.painted-character) { color:#526362; background:#f6f1e6d9; border:1px solid #c3cabb; border-radius:5px; }
+#app[data-screen] .summon-bottom { background:linear-gradient(transparent,#f2eee4 10%); padding:16px 10px 8px; color:var(--ink); }
+#app[data-screen] .summon-bottom .pill { font-size:10px; margin:0 0 5px; }
+#app[data-screen] .summon-bottom .secondary { background:#e5e9e1; color:#536056; border:1px solid #bbc5b7; }
+.ticket-count { font-size:11px; margin:3px 0 5px; color:#5c655b; }.ticket-buttons { margin-bottom:6px; }
+#app[data-screen] .pull-buttons button { min-height:43px; padding:5px; font-size:12px; }
+#app[data-screen] .pull-buttons button small { font-size:10px; color:inherit; display:block; margin-top:2px; }
+#app[data-screen] .summon-rules { color:#666654; font-size:11px; margin-top:6px; }.summon-rules p { color:#746f62 !important; }
+#app[data-screen] .scene-help { color:#5d685b; background:#f4efdf; border:1px solid var(--line); }
+/* Every dialog, reveal, result and error uses the same surface palette. */
+dialog.cinematic,dialog.equipment-dialog,dialog.team-picker-dialog.cinematic { background:var(--paper); color:var(--ink); border:1px solid var(--line); }
+dialog.cinematic::backdrop { background:#33372f80; backdrop-filter:blur(2px); }
+dialog.cinematic .card,dialog.cinematic .card-info { background:#f1eadd; border-width:1px; border-radius:5px; color:#5b5142; }
+dialog.cinematic .card-info h3,dialog.cinematic .card-info small,dialog.cinematic .card-info .stats { color:#5b5142; }
+dialog.cinematic .card-back { background:#d7e1dd; border:1px solid #9cae9f; border-radius:6px; }dialog.cinematic .card-back span { color:#718b80; }
+.cinematic:has(.summon-cinema) { background:var(--paper); border:1px solid var(--line); }
+.summon-cinema h2,.summon-cinema p,.cinema-heading small { color:#5c6253 !important; }
+.summon-gate { opacity:.65; }
+.cinematic.battle-fullscreen,.battle-fullscreen .battle-cinema { background:var(--paper); color:var(--ink); }
+.battle-fullscreen .combat-controls button { background:#e4e7dd; border:1px solid #bec6b7; color:#53604f; }
+.battle-fullscreen .combat-arena .world-scene img { filter:saturate(.7); }
+.battle-fullscreen .combat-log,.combat-stat-row { background:#e8e3d7; color:#5f594c !important; border:1px solid var(--line); border-radius:5px; }
+.battle-fullscreen .combat-outcome { background:#f9f4e8; border:1px solid var(--line); border-radius:7px; }
+.combat-outcome h2 { letter-spacing:1px; font:700 24px system-ui; }
+.round-counter { background:#5a6657dc; border:1px solid #a9b39e; border-radius:4px; }
+.battle-exit { background:#e8e2d5; border:1px solid #beb4a1; color:#655d50; }
+.game-toast { background:#4f594deF; border:1px solid #8c9c84; color:#fffbee; border-radius:6px; box-shadow:none; }
+@media(max-height:740px) { #app[data-screen] .reference-formation .inline-formation-picker { height:185px; }.fullscreen-town .street-party { bottom:19%; } #app[data-screen] .summon-feature { inset:40px 0 205px; } }
+@media(max-height:620px) { #app[data-screen] .reference-formation .inline-formation-picker { height:154px; } #app[data-screen] .reference-formation .formation-scene { min-height:150px; }.formation-selection { min-height:26px; font-size:9px; }.formation-selection span { font-size:8px; } #app[data-screen] .summon-feature { inset:36px 0 205px; } #app[data-screen] .summon-feature h2 { top:42px; font-size:16px; } .gallery-heading { min-height:40px; } }
+@media(prefers-reduced-motion:reduce) { .formation-drag-ghost { transition:none; } }
+.game-dock .game-icon > path,.game-hud .game-icon > path,.town-side-tools .game-icon > path,.world-banner-title .game-icon > path { fill:#b7a780; stroke:#72664f; stroke-width:1.5; }
+#app[data-screen] .dossier-nameplate h2 { color:#fff7e5; }
+#app[data-screen] .dossier-nameplate small { color:#e3dfd2; }
+#app[data-screen] .dossier-actions button { background:#e1ddd1; border:1px solid #bfb6a7; border-radius:5px; color:#605747; box-shadow:none; }
+#app[data-screen] .dossier-actions .dossier-upgrade { background:#efd396; color:#57472d; }
+#app[data-screen] .dossier-footer { border-top:1px solid #bfb6a7; }
+#app[data-screen] .dossier-footer span { color:#847969; }
+#app[data-screen] .equipment-title span,dialog.cinematic .equipment-title span,dialog.cinematic .equipment-choice small { color:#766d5d; }
+#app[data-screen] .dungeon-card h3,#app[data-screen] .guild-banner h2,#app[data-screen] .boss-panel h3,#app[data-screen] .weekly-panel h3 { color:#514b41; }
+
+:root { --muted-ink:#746f65; }
+#app[data-screen]:not(.hero-detail-open) .game-stage { background:var(--paper); }
+#app[data-screen] .welfare-tabs { background:#e7e1d5; border:1px solid var(--line); border-radius:6px; gap:4px; padding:4px; }
+#app[data-screen] .welfare-tabs button { background:transparent; border:0; color:#716656; border-radius:4px; }
+#app[data-screen] .summon-rules { background:#e6e9df; border:1px solid #c2cbbb; border-radius:5px; padding:8px; }
+dialog.cinematic.revamped-equipment,dialog.cinematic.team-picker-dialog,dialog.cinematic:has(.hero-profile) { background:var(--paper); border:1px solid var(--line); color:var(--ink); }
+dialog.cinematic .six-equipment button { background:#e8e5d9; border:1px solid var(--line); border-radius:6px; }
+dialog.cinematic .six-equipment button > span { color:#86775b; }
+dialog.cinematic .six-equipment small { color:#6d6353; }
+dialog.cinematic .primary { background:#f1cf88; border:1px solid #c4a46c; border-radius:6px; color:#4d422d; box-shadow:0 2px 0 #bda57840; }
+dialog.cinematic .secondary { background:#e9e5dc; color:var(--ink); border:1px solid var(--line); border-radius:6px; box-shadow:none; }
+dialog.cinematic h2,dialog.cinematic h3 { color:var(--ink); }
+dialog.cinematic p { color:var(--muted); }
+.formation-card .pixel-character,.formation-slots [data-position] { touch-action:none; }
+#app[data-screen] .guild-section-tabs,#app[data-screen] .forge-panel-tabs { background:#e8e3d7; border:1px solid var(--line); border-radius:6px; padding:4px; gap:4px; }
+#app[data-screen] .guild-section-tabs button,#app[data-screen] .forge-panel-tabs button { background:transparent; border:0; border-radius:4px; color:#6d6251; }
+#app[data-screen] .guild-section-tabs button.active,#app[data-screen] .forge-panel-tabs button.active { background:#dce6df; color:#4d6756; }
+#app[data-screen] .member-list,#app[data-screen] .empty-state,#app[data-screen] .auth-intro,#app[data-screen] .battle-result { background:#ece7db; color:var(--ink); border:1px solid var(--line); border-radius:6px; }
+#app[data-screen] #chat-form button { padding:5px; white-space:nowrap; min-width:49px; }
+#app[data-screen] .guild-banner p b { color:#66563d; }
+#app[data-screen] .auth-intro { padding:18px 12px; }
+#app[data-screen] .preset-board,#app[data-screen] .gear-item,dialog.cinematic .profile-stats,dialog.cinematic .growth-preview,dialog.cinematic .team-selection button,dialog.cinematic .hero-growth-actions { background:#ebe6da; color:#61594a; border:1px solid var(--line); border-radius:6px; }
+#app[data-screen] .gear-item small,dialog.cinematic .profile-stats b,dialog.cinematic .growth-preview b,dialog.cinematic .growth-preview span { color:#637863; }
+#app[data-screen] .preset-board input { background:#faf7ef; }
+#app[data-screen] .formation-options > .screen-panel { border:1px solid var(--line); box-shadow:0 3px 8px #4b493530; }
+#app[data-screen] .synergy-chips span { background:#dfe9df; color:#57725a; border:1px solid #c3d0be; border-radius:4px; }
+#app[data-screen] .home-drawer .drawer-close { background:#e5e0d3; border:1px solid var(--line); border-radius:5px; color:#6a5c45; }
+.sanctum-region-label { left:55px; top:12px; }
+#app[data-screen] .town-quest-float .primary { min-height:36px; height:36px; }

@@ -3,7 +3,7 @@ import "./revamp.css";
 import "./hero-ui.css";
 import "./world-ui.css";
 import "./sanctum-ui.css";
-import { paintedIcon } from "./sanctum-ui.js";
+import "./soft-ui.css";
 import { worldScene, screenBanner, campaignMap, teamStrip, accountBanner, wireWorld } from "./world-ui.js";
 import { galleryView, heroDetailView, heroSkills, gameIcon } from "./hero-ui.js";
 import {
@@ -180,7 +180,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0] ?? 8])}<span>${cloud.user ? "☁" : "◉"}</span></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")} <b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet">${paintedIcon("coin")} <b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn ? "♫" : "♪"}</button>${document.documentElement.requestFullscreen ? '<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>' : ""}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0] ?? 8])}<span>${cloud.user ? "☁" : "◉"}</span></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")} <b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span class="coin-mark" aria-hidden="true">●</span> <b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn ? "♫" : "♪"}</button>${document.documentElement.requestFullscreen ? '<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>' : ""}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "主城"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -190,7 +190,7 @@ function render() {
   ]
     .map(
       ([id, icon, label]) =>
-        `<button data-tab="${id}" class="${tab === id ? "active" : ""}" aria-label="${label}">${paintedIcon(id)}<small>${label}</small></button>`,
+        `<button data-tab="${id}" class="${tab === id ? "active" : ""}" aria-label="${label}">${gameIcon(id)}<small>${label}</small></button>`,
     )
     .join(
       "",
@@ -227,14 +227,13 @@ function render() {
   );
   const presetMount = $.querySelector("#preset-mount");
   if (presetMount) presetMount.innerHTML = presetView();
-  const ticketButton = $.querySelector("[data-ticket-pull]");
-  if (ticketButton)
+  $.querySelectorAll("[data-ticket-pull]").forEach(ticketButton =>
     ticketButton.onclick = () =>
       run(async () => {
-        results = await dispatch({ type: "ticketSummon" });
+        results = await dispatch({ type: "ticketSummon", count: Number(ticketButton.dataset.ticketPull) });
         showSummon(results);
         notice = "召唤券招募完成";
-      });
+      }));
   $.querySelectorAll("[data-collection-mode]").forEach(
     (b) =>
       (b.onclick = () => {
@@ -676,19 +675,19 @@ function homeView() {
   const idle = idleReward(state),
     zones = [
       {name:"星海旅团",sub:"公会 · 好友 · 竞技",buildings:[
-        ["social","","公会","guild",31,12],
-        ["social","","好友","friends",12,30],
-        ["arena","","竞技场","arena",57,30]]},
-      {name:"星灯圣域",sub:"冒险 · 阵容 · 试炼",buildings:[
-        ["collection","","英雄","workshop",31,12],
-        ["adventure","","冒险","portal",12,30],
-        ["adventure","","爬塔","tower",57,30]]},
-      {name:"星辉神域",sub:"召唤 · 锻造 · 培养",buildings:[
-        ["summon","","召唤","summon",31,12],
-        ["collection","","装备","forge",12,30],
-        ["collection","","培养","workshop",57,30]]}
+        ["social","","公会","guild",34,10],
+        ["social","","好友","friends",60,31],
+        ["arena","","竞技场","arena",9,31]]},
+      {name:"星灯小镇",sub:"冒险 · 阵容 · 试炼",buildings:[
+        ["collection","","英雄","workshop",34,10],
+        ["adventure","","冒险","portal",9,31],
+        ["adventure","","爬塔","tower",60,31]]},
+      {name:"工匠街",sub:"召唤 · 锻造 · 培养",buildings:[
+        ["summon","","召唤","summon",34,10],
+        ["collection","","装备","forge",9,31],
+        ["collection","","培养","workshop",60,31]]}
     ];
-  return `<div class="fullscreen-town"><div class="sanctum-region-label">天空岛</div><button class="sanctum-growth-banner" data-home-drawer="welfare">${paintedIcon("gift")}<span><b>每日好礼</b><small>签到就能领召唤券</small></span></button><div class="town-scroll" tabindex="0" aria-label="主城街区，可左右滑动或使用方向键">${zones
+  return `<div class="fullscreen-town"><div class="sanctum-region-label">左右滑动逛小镇</div><button class="sanctum-growth-banner" data-home-drawer="welfare">${gameIcon("gift")}<span><b>每日好礼</b><small>签到就能领召唤券</small></span></button><div class="town-scroll" tabindex="0" aria-label="主城街区，可左右滑动或使用方向键">${zones
     .map(
       (z, i) =>
         `<section class="town-district" aria-label="${z.name}">${worldScene(["sanctum-west","sanctum-center","sanctum-east"][i])}<div class="district-title"><b>${z.name}</b><small>${z.sub}</small></div>${z.buildings.map(([id, icon, name, kind, x, y], buildingIndex) => `<button class="scene-building ${kind} ${buildingIndex===0?"primary-building":""}" data-tab="${id}" data-building-kind="${kind}" style="left:${x}%;top:${y}%"><b>${name}<span>›</span></b></button>`).join("")}<div class="street-party">${state.team
@@ -703,10 +702,10 @@ function homeView() {
     )
     .join(
       "",
-    )}</div><div class="town-side-tools"><button data-home-drawer="welfare">${paintedIcon("welfare")}<small>福利</small>${rewardDots(state).welfare ? "<i>●</i>" : ""}</button><button data-home-drawer="mail">${paintedIcon("mail")}<small>邮箱</small>${rewardDots(state).mail ? "<i>●</i>" : ""}</button><button data-home-drawer="daily">${paintedIcon("task")}<small>任务</small></button><button data-home-drawer="idle">${paintedIcon("idle")}<small>挂机</small>${idle.minutes ? " <i>●</i>" : ""}</button></div><div class="town-travel"><button data-town-step="-1" aria-label="向左浏览街区">‹</button><div>${zones.map((z, i) => `<button data-town-dot="${i}" class="${townPage === i ? "active" : ""}" aria-pressed="${townPage === i}" aria-label="${z.name}"></button>`).join("")}</div><button data-town-step="1" aria-label="向右浏览街区">›</button></div><div class="town-quest-float"><div><small>主线 ${state.stage} / 36</small><b>${chapters[Math.floor((state.stage - 1) / 3)]}</b></div><button class="primary" data-tab="adventure">开始冒险</button></div>${homeDrawer ? `<div class="home-drawer"><button class="drawer-close" data-dismiss-drawer aria-label="关闭">×</button>${["welfare", "mail", "achievements"].includes(homeDrawer) ? welfareView(state, homeDrawer) : homeDrawer === "daily" ? dailyView() : `<div class="idle-full">${gameIcon("shield")}<h2>放置宝箱</h2><p>金币 <b id="idle-coins">${idle.coins}</b> · 星钻 <b id="idle-gems">${idle.gems}</b></p><small>最多累积八小时</small><button class="primary" id="claim-idle" ${idle.minutes < 1 ? "disabled" : ""}>领取奖励</button></div>`}</div>` : ""}</div>`;
+    )}</div><div class="town-side-tools"><button data-home-drawer="welfare">${gameIcon("gift")}<small>福利</small>${rewardDots(state).welfare ? "<i>●</i>" : ""}</button><button data-home-drawer="mail">${gameIcon("mail")}<small>邮箱</small>${rewardDots(state).mail ? "<i>●</i>" : ""}</button><button data-home-drawer="daily">${gameIcon("book")}<small>任务</small></button><button data-home-drawer="idle">${gameIcon("shield")}<small>挂机</small>${idle.minutes ? " <i>●</i>" : ""}</button></div><div class="town-travel"><button data-town-step="-1" aria-label="向左浏览街区">‹</button><div>${zones.map((z, i) => `<button data-town-dot="${i}" class="${townPage === i ? "active" : ""}" aria-pressed="${townPage === i}" aria-label="${z.name}"></button>`).join("")}</div><button data-town-step="1" aria-label="向右浏览街区">›</button></div><div class="town-quest-float"><div><small>主线 ${state.stage} / 36</small><b>${chapters[Math.floor((state.stage - 1) / 3)]}</b></div><button class="primary" data-tab="adventure">开始冒险</button></div>${homeDrawer ? `<div class="home-drawer"><button class="drawer-close" data-dismiss-drawer aria-label="关闭">×</button>${["welfare", "mail", "achievements"].includes(homeDrawer) ? welfareView(state, homeDrawer) : homeDrawer === "daily" ? dailyView() : `<div class="idle-full">${gameIcon("shield")}<h2>放置宝箱</h2><p>金币 <b id="idle-coins">${idle.coins}</b> · 星钻 <b id="idle-gems">${idle.gems}</b></p><small>最多累积八小时</small><button class="primary" id="claim-idle" ${idle.minutes < 1 ? "disabled" : ""}>领取奖励</button></div>`}</div>` : ""}</div>`;
 }
 function summonView() {
-  return `<div class="summon-stage"><div class="summon-sky">${scenery("night")}</div><div class="screen-caption"><small>STELLAR SUMMON</small><h2>星之祈愿</h2></div><div class="summon-feature">${illustration(heroes[0])}<div class="summon-orbit"></div><span>UR · 月光祭司</span><h2>露米</h2></div><button class="scene-help" data-home-drawer="">?</button><div class="summon-bottom"><span class="pill">${state.pity} / 50 · SSR 保底</span><button class="ticket-pull secondary" data-ticket-pull ${state.tickets < 1 ? "disabled" : ""}>召唤券招募 · 剩余 ${state.tickets} 张</button><div class="pull-buttons"><button class="secondary" data-pull="1" ${state.gems < 150 ? "disabled" : ""}>召唤一次<small>✦150</small></button><button class="primary" data-pull="10" ${state.gems < 1500 ? "disabled" : ""}>召唤十次<small>✦1,500 · SR 保底</small></button></div><details class="summon-rules"><summary>概率与英雄图鉴</summary><p>R 70% · SR 24% · SSR 5% · UR 1%，第50抽至少SSR，SSR/UR重置保底。</p><div class="codex-grid">${heroes.map((h) => `<button data-detail="${h.id}" style="--accent:${rarities[h.rarity].color}">${portrait(h)}<small>${h.rarity} · ${h.name}</small></button>`).join("")}</div></details></div></div>`;
+  return `<div class="summon-stage"><div class="summon-sky">${scenery("night")}</div><div class="screen-caption"><small>STELLAR SUMMON</small><h2>星之祈愿</h2></div><div class="summon-feature">${illustration(heroes[0])}<div class="summon-orbit"></div><span>UR · 月光祭司</span><h2>露米</h2></div><button class="scene-help" data-home-drawer="">?</button><div class="summon-bottom"><span class="pill">${state.pity} / 50 · SSR 保底</span><div class="ticket-count">召唤券 <b>${state.tickets}</b> 张</div><div class="pull-buttons ticket-buttons"><button class="secondary" data-ticket-pull="1" ${state.tickets < 1 ? "disabled" : ""}>券单抽<small>消耗 1 张</small></button><button class="primary" data-ticket-pull="10" ${state.tickets < 10 ? "disabled" : ""}>券十连<small>消耗 10 张 · SR 保底</small></button></div><div class="pull-buttons"><button class="secondary" data-pull="1" ${state.gems < 150 ? "disabled" : ""}>召唤一次<small>✦150</small></button><button class="primary" data-pull="10" ${state.gems < 1500 ? "disabled" : ""}>召唤十次<small>✦1,500 · SR 保底</small></button></div><details class="summon-rules"><summary>概率与英雄图鉴</summary><p>R 70% · SR 24% · SSR 5% · UR 1%，第50抽至少SSR，SSR/UR重置保底。</p><div class="codex-grid">${heroes.map((h) => `<button data-detail="${h.id}" style="--accent:${rarities[h.rarity].color}">${portrait(h)}<small>${h.rarity} · ${h.name}</small></button>`).join("")}</div></details></div></div>`;
 }
 function heroSortValue(h) {
   return rosterSort === "level"

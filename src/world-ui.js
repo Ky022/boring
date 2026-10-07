@@ -2,8 +2,8 @@ import {gameIcon} from './hero-ui.js';
 import {sprite} from './pixel.js';
 import {heroes, level, power, enemyPower, chapters, maxStage} from './game.js';
 export function worldScene(name, cls='') {
- name=({"town-center":"sanctum-center","town-west":"sanctum-west","town-east":"sanctum-east"})[name]||name;
- return `<div class="world-scene ${cls}"><img src="${new URL(`art/${name}.webp?v=chibi-1`,document.baseURI).href}" alt="" draggable="false"></div>`;
+ name=({"town-center":"cozy-town","sanctum-center":"cozy-town","town-west":"cozy-west","sanctum-west":"cozy-west","town-east":"cozy-east","sanctum-east":"cozy-east"})[name]||name;
+ return `<div class="world-scene ${cls}"><img src="${new URL(`art/${name}.webp?v=soft-1`,document.baseURI).href}" alt="" draggable="false"></div>`;
 }
 export function screenBanner(title, subtitle, icon='adventure', scene='town-center') {
  return `<div class="world-banner">${worldScene(scene)}<div class="banner-scrim"></div><div class="world-banner-title">${gameIcon(icon)}<div><h2>${title}</h2><p>${subtitle}</p></div></div></div>`;

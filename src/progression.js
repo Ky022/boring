@@ -545,7 +545,9 @@ export function expansionAction(s, a, rng, ctx) {
     return result(grant(s, m.reward));
   }
   if (a.type === "ticketSummon") {
-    if (s.tickets < 1) throw Error("召唤券不足");
+    const count = a.count ?? 1;
+    if (![1, 10].includes(count)) throw Error("召唤数量无效");
+    if (s.tickets < count) throw Error("召唤券不足");
     // Caller delegates to the existing pity/guarantee implementation; no client-supplied rewards.
     return { handled: false };
   }
