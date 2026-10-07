@@ -1,3 +1,4 @@
+import { ensureOdyssey, odysseyFresh, validOdyssey, recordSpent } from "./odyssey.js";
 // JSON extensions migrate lazily inside the existing authoritative player transaction.
 export const slots = ["weapon", "body", "head", "legs", "feet", "charm"];
 export const slotNames = {
@@ -80,6 +81,7 @@ export const achievements = [
 const day = (now = Date.now()) => new Date(now).toISOString().slice(0, 10);
 export function expansionFresh() {
   return {
+    odyssey: odysseyFresh(),
     formation: null,
     edition: 1,
     legacyMigrated: false,
@@ -105,7 +107,7 @@ export function expansionFresh() {
   };
 }
 export function expandSave(s) {
-  if (s.edition === 1) return s;
+  if (s.edition === 1) { ensureOdyssey(s); return s; }
   Object.assign(s, expansionFresh());
   s.legacyMigrated = true;
   // Keep legacy inventory/equipment untouched for rollback, convert every owned copy once.
@@ -441,11 +443,12 @@ export function expansionAction(s, a, rng, ctx) {
         .flatMap(([, l]) => Object.values(l)),
     );
     for (const id of team) {
+      const preferred = ctx.heroes[id]?.role === "骑士" ? "stone" : ctx.heroes[id]?.role === "治疗" ? "moon" : "flame";
       s.loadouts[id] = {};
       for (const slot of slots) {
         const best = s.items
           .filter((i) => i.slot === slot && !used.has(i.id))
-          .sort((a, b) => itemPower(b) - itemPower(a))[0];
+          .sort((a, b) => (itemPower(b) + (b.set === preferred ? 8 : 0)) - (itemPower(a) + (a.set === preferred ? 8 : 0)))[0];
         if (best) {
           s.loadouts[id][slot] = best.id;
           used.add(best.id);
@@ -461,12 +464,15 @@ export function expansionAction(s, a, rng, ctx) {
     if (a.type === "skillUp") {
       if (n >= 5 || s.books < n + 1 || s.coins < (n + 1) * 200)
         throw Error("技能书或金币不足，技能上限 5 级");
+      recordSpent(s,a.id,"books",n+1);
+      recordSpent(s,a.id,"coins",(n+1)*200);
       s.books -= n + 1;
       s.coins -= (n + 1) * 200;
       s.skills[a.id] = n + 1;
     } else {
       if (!s.experience || (s.levels[a.id] || 1) >= 50)
         throw Error("经验药剂不足或已满级");
+      recordSpent(s,a.id,"experience",1);
       s.experience--;
       s.levels[a.id] = Math.min(50, (s.levels[a.id] || 1) + 2);
       ctx.dailyState(s).upgrades++;
@@ -623,6 +629,7 @@ export function validExpansion(s) {
     Number.isSafeInteger(n) && n >= 0 && n <= max;
   const rec = (v) => v && typeof v === "object" && !Array.isArray(v);
   if (
+    !validOdyssey(s.odyssey,s) ||
     s.edition !== 1 ||
     !["stones", "experience", "books", "tickets", "itemSeq"].every((k) =>
       int(s[k]),

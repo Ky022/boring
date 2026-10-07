@@ -618,6 +618,29 @@ test("database accounts, cloud progress, guild cooperation, chat and arena", asy
       assert.equal((await act({ type: "welfare", task: "free" })).status, 400);
     },
   );
+  await t.test("odyssey actions persist, reject invalid commands and deduplicate refunds", async () => {
+    const account = await call("/register", null, {username:"Odyssey",password:"testpass123"});
+    let current = account;
+    const act = async action => {
+      const cmd = {requestId:crypto.randomUUID(),revision:current.revision,action};
+      const r = await call("/action", account.token, cmd);
+      if(r.status===200) current=r;
+      return {r,cmd};
+    };
+    assert.equal((await act({type:"wishlist",ids:[8]})).r.status,400);
+    assert.equal((await act({type:"wishlist",ids:[2]})).r.status,200);
+    await act({type:"upgrade",id:8});
+    const {r,cmd}=await act({type:"trainingReset",id:8});
+    assert.equal(r.status,200);assert.equal(r.state.coins,1000);
+    assert.equal((await call("/action",account.token,cmd)).state.coins,1000);
+    assert.equal((await act({type:"trainingReset",id:8})).r.status,400);
+    assert.equal((await act({type:"expeditionStart",tier:1})).r.status,200);
+    assert.equal((await act({type:"expeditionBoon",boon:"rest"})).r.status,400);
+    const restored=await call("/login",null,{username:"Odyssey",password:"testpass123"});
+    assert.deepEqual(restored.state.odyssey.wishlist,[2]);
+    assert.equal(restored.state.odyssey.run.node,0);
+    assert.deepEqual(restored.state.odyssey.run.team,[8,9,10]);
+  });
   await t.test("logout revokes session", async () => {
     await call("/logout", eve.token, {});
     assert.equal((await call("/me", eve.token)).status, 401);

@@ -27,7 +27,7 @@ export function simulateCombat(
         ...u,
         unitId: prefix + i,
         maxHp,
-        hp: maxHp,
+        hp:Math.round(maxHp*(u.initialFraction??1)),
         attackBonus: bonus + (u.gearBonus?.attack || 0),
         shield: 0,
         burn: null,
@@ -35,7 +35,7 @@ export function simulateCombat(
         stunned: false,
         counter: false,
         revived: false,
-        initialHp: maxHp,
+        initialHp:Math.round(maxHp*(u.initialFraction??1)),
       };
     });
   };

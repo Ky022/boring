@@ -68,8 +68,8 @@ export function forgeView(s, nav, id) {
         return `<article class="equipment-card q${i.quality}" data-slot="${i.slot}" data-quality="${i.quality}"><div class="bag-item-art">${itemIcon(i)}<b>+${i.level}</b>${i.locked?"<span>锁定</span>":""}</div><b class="bag-item-name">${i.name}</b><small>${qualities[i.quality]} · ${slotNames[i.slot]}</small><details class="bag-item-details"><summary>属性 / 强化</summary><div><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${slotNames[i.slot]} · 战力 +${itemPower(i)}</small><small>${itemStatText(i)}<br>${sets[i.set]}套装 · ${owner ? heroes[+owner[0]].name + "穿戴中" : "未穿戴"}</small></div><div class="item-actions"><button data-item-action="itemForge" data-item-id="${i.id}" ${i.level >= 10 ? "disabled" : ""}>强化</button><button data-item-action="itemLock" data-item-id="${i.id}">${i.locked ? "解锁" : "锁定"}</button><button data-item-action="itemSalvage" data-item-id="${i.id}" ${owner || i.locked ? "disabled" : ""}>分解</button></div></details></article>`;
       })
       .join("") ||
-    '<div class="empty-state">还没有装备<br>前往遗落兵工厂获取，或购买基础装备。</div>'
-  }</div><div class="set-guide"><h3>套装效果</h3><p>焰羽 2 件：攻击 +8%<br>月泉 2 件：治疗 +15%<br>坚岩 2 件：生命 +12%，4 件：护盾 +20%</p></div></div></div>`;
+    '<div class="r-equipment-empty"><b>先给伙伴准备一套旅行装备</b><p>基础商店填满六个部位，遗落兵工厂获取更高品质装备。</p><button class="primary" data-adventure-mode="daily">前往日常副本 ›</button><button class="secondary" data-forge-panel="shop">选购基础装备 ›</button></div>'
+  }</div><div class="set-guide"><h3>给不同职业搭配套装</h3><div class="r-set-options"><span><b>焰羽 · 输出</b><small>2件攻击 +8%</small></span><span><b>月泉 · 治疗</b><small>2件治疗 +15%</small></span><span><b>坚岩 · 骑士</b><small>2件生命 +12% · 4件护盾 +20%</small></span></div><p>一键装备优先职业适合的套装；高品质与强化收益也会参与选择。</p></div></div></div>`;
 }
 export function dungeonView(s) {
   const d = dungeonState(s);

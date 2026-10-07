@@ -1,3 +1,4 @@
+import { ensureOdyssey, odysseyAction, recordSpent } from "./odyssey.js";
 import {
   expansionFresh,
   expandSave,
@@ -341,7 +342,10 @@ export function summon(state, count, rng = Math.random, currency = "gems") {
       rarity = "SR";
     if (rarity === "SSR" || rarity === "UR") state.pity = 0;
     const pool = heroes.filter((h) => h.rarity === rarity);
-    const h = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))];
+    const rollHero=rng();
+    const wishes=ensureOdyssey(state).wishlist.filter(id=>heroes[id]?.rarity===rarity);
+    const h = wishes.length && rollHero<.5 ? heroes[wishes[Math.min(wishes.length-1,Math.floor(rollHero*2*wishes.length))]] : pool[Math.min(pool.length - 1, Math.floor((wishes.length?(rollHero-.5)*2:rollHero) * pool.length))];
+    if(state.collection[h.id])ensureOdyssey(state).shards+={R:1,SR:3,SSR:8,UR:15}[rarity];
     state.collection[h.id] = (state.collection[h.id] || 0) + 1;
     result.push(h);
   }
@@ -382,6 +386,7 @@ export function upgrade(state, id) {
   if (state.coins < cost) throw new Error("金币不足");
   dailyState(state).upgrades++;
   state.coins -= cost;
+  recordSpent(state,id,"coins",cost);
   state.levels[id] = level(state, id) + 1;
   return { id, level: state.levels[id], cost };
 }
@@ -471,6 +476,8 @@ export function battle(
     state.coins += coins;
   }
   const foughtStage = state.stage;
+  const stars=result.won?1+(result.players.every(u=>u.hp>0)?1:0)+(result.rounds<=8?1:0):0;
+  if(result.won&&!elite){const o=ensureOdyssey(state);o.stars[foughtStage]=Math.max(o.stars[foughtStage]||0,stars);}
   let loot = null;
   if (result.won) {
     loot = awardLoot(state, foughtStage, rng, elite);
@@ -480,6 +487,7 @@ export function battle(
     ...result,
     reward,
     coins,
+    stars,
     stage: foughtStage,
     nextStage: state.stage,
     elite,
@@ -490,6 +498,8 @@ export function battle(
 
 export function applyAction(state, action, rng = Math.random, support = null) {
   expandSave(state);
+  const extended = odysseyAction(state,action,rng,{heroes,power,combatTeam,simulateCombat,dailyState});
+  if(extended.handled)return extended.result;
   const extra = expansionAction(state, action, rng, {
     heroes,
     power,
