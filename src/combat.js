@@ -138,6 +138,7 @@ export function simulateCombat(
         const alive = opposing.filter((u) => u.hp > 0);
         if (!alive.length) break;
         if(actor.phase&&!actor.phaseTriggered&&actor.hp<=actor.maxHp*.5){actor.phaseTriggered=true;actor.attackBonus+=.15;emit(actor,actor,round,"首领第二阶段 · 攻击提高15%",{status:"phase"});}
+        if(actor.phase && round%3===2)emit(actor,actor,round,'首领蓄力 · 下一回合释放技能',{status:'warning'});
         const skillRound = round % 3 === 0,
           ability = actor.ability || {},
           effects = ability.effects || [];

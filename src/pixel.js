@@ -13,6 +13,7 @@ const palettes = [
   ["#728ca6", "#667a91", "#3c465f", "#d6ba89"],
 ];
 export function pixelCharacter(hero, classes = "") {
+  if(hero.id>=8&&hero.id<=10){const url=new URL('art/starter-actions.webp',document.baseURI).href;return `<span class="pixel-character frame-character ${classes}" data-frame-hero="${hero.id}" role="img" aria-label="${hero.name} · ${hero.title}"><svg viewBox="0 ${(hero.id-8)*2*1024/6} ${1024/6} ${1024/6}" overflow="hidden" aria-hidden="true"><image href="${url}" width="1024" height="1024"/></svg></span>`;}
   const url = new URL('art/pixel-heroes.webp', document.baseURI).href;
   // Art-directed row bounds keep every full weapon inside its own viewport.
   const rows = [0, 258, 493, 718, 916, 1121], row = Math.floor(hero.id / 8);

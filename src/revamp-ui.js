@@ -372,8 +372,9 @@ export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
                   const owner = Object.entries(s.loadouts).find(([, l]) =>
                     Object.values(l).includes(i.id),
                   );
-                  const equipped = s.items.find((x) => x.id === current[slot]),
-                    delta = itemPower(i) - (equipped ? itemPower(equipped) : 0);
+                  const equipped = s.items.find((x) => x.id === current[slot]);
+                  const preview=structuredClone(s);(preview.loadouts[id]??={})[slot]=i.id;
+                  const delta=power(preview,id)-power(s,id);
                   return `<button class="equipment-choice q${i.quality}" data-loadout-item="${i.id}" data-slot="${slot}" ${owner && Number(owner[0]) !== id ? "disabled" : ""}>${itemIcon(i)}<span><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${itemStatText(i)}<br><strong class="equip-delta ${delta>=0?'positive':'negative'}">替换后战力 ${delta >= 0 ? "+" : ""}${delta}</strong> · ${sets[i.set]}套<br>${Object.entries(itemStats(i)).filter(([,n])=>n>0).map(([k,n])=>{const diff=(n-(equipped?itemStats(equipped)[k]:0))*100;return `${{attack:'攻击',hp:'生命',crit:'暴击',heal:'治疗'}[k]} ${diff>=0?'+':''}${diff.toFixed(1)}%`;}).join(' · ')}</small><small>${owner ? `${heroes[+owner[0]].name}穿戴中` : "可穿戴"}</small></span>${current[slot] === i.id ? "✓" : ""}</button><button class="v-direct-forge secondary" data-direct-forge="${i.id}" ${i.level>=10?'disabled':''}>强化 +${i.level} → +${Math.min(10,i.level+1)} · ${(i.level+1)*100}金币 + ${i.level+1}强化石</button>`;
                 })
                 .join("") || "<p>暂无此部位装备，去日常副本或工坊获取。</p>"

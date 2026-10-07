@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {fresh,applyAction,level} from './src/game.js';
+import {levelPlan} from './src/growth-ui.js';
+test('batch level preview matches charged cost and reset restores resources',()=>{const s=fresh();s.coins=10000;const p=levelPlan(s,8,5);const r=applyAction(s,{type:'levelBatch',id:8,count:5});assert.equal(r.cost,p.cost);assert.equal(r.level,p.after);assert.equal(s.coins,8500);applyAction(s,{type:'trainingReset',id:8});assert.equal(level(s,8),1);assert.equal(s.coins,10000);});
+test('batch rejects insufficient funds without partially leveling',()=>{const s=fresh();s.coins=1499;assert.throws(()=>applyAction(s,{type:'levelBatch',id:8,count:5}),/金币不足/);assert.equal(level(s,8),1);assert.equal(s.coins,1499);assert.equal(s.odyssey.spent[8],undefined);});
+test('batch clips at cap and rejects invalid inputs',()=>{const s=fresh();s.levels[8]=49;s.coins=10000;assert.equal(applyAction(s,{type:'levelBatch',id:8,count:5}).cost,4900);assert.equal(level(s,8),50);assert.throws(()=>applyAction(s,{type:'levelBatch',id:8,count:5}),/上限/);for(const count of [0,6,1.5,'5'])assert.throws(()=>applyAction(s,{type:'levelBatch',id:9,count}));});
+test('boss warns one round ahead without changing normal combat skills',async()=>{const {simulateCombat}=await import('./src/combat.js');const r=simulateCombat([{name:'守卫',role:'骑士',power:100,element:'水'}],[{name:'首领',role:'战士',power:100,element:'火',phase:true}],()=>.99);const warnings=r.events.filter(e=>e.status==='warning');assert.ok(warnings.length>0);assert.ok(warnings.every(e=>e.round%3===2&&e.actor===e.target));});

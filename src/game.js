@@ -499,6 +499,16 @@ export function battle(
 
 export function applyAction(state, action, rng = Math.random, support = null) {
   expandSave(state);
+  if(action.type==='levelBatch'){
+    const {id,count}=action;
+    if(!Number.isInteger(id)||!heroes[id]||!state.collection[id])throw Error('尚未拥有角色');
+    if(!Number.isInteger(count)||count<1||count>5)throw Error('升级次数无效');
+    const before=level(state,id),steps=Math.min(count,50-before),cost=steps*(2*before+steps-1)*50;
+    if(!steps)throw Error('已达到 50 级上限');
+    if(state.coins<cost)throw Error('金币不足');
+    recordSpent(state,id,'coins',cost);state.coins-=cost;state.levels[id]=before+steps;dailyState(state).upgrades+=steps;
+    return {id,before,level:before+steps,cost};
+  }
   const extended = odysseyAction(state,action,rng,{heroes,power,combatTeam,simulateCombat,dailyState});
   if(extended.handled)return extended.result;
   const week = weeklyAction(state, action, rng, {heroes,combatTeam,simulateCombat,dailyState});

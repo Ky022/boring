@@ -1,3 +1,6 @@
+import {wireFrameCharacters,setFrameMotion} from './frame-motion.js';
+import './core-ui.css';
+import {growthView} from './growth-ui.js';
 import './voyage.css';
 import {wireCamp,wireHeroSwipe} from './camp-life.js';
 import {weeklyView as voyageWeeklyView} from './weekly-ui.js';
@@ -159,10 +162,12 @@ function revampContext() {
     isBusy: () => busy,
   };
 }
+let stopFrames=()=>{};
 let stopCamp=()=>{};
 let liteMode=false;try{liteMode=localStorage.getItem("astral-lite-mode")==="1";}catch{}
 function render() {
   stopCamp();
+  stopFrames();
   document.body.classList.toggle("lite-mode",liteMode);
   $.classList.toggle('hero-detail-open', tab === 'collection' && collectionMode === 'heroes' && heroDetailOpen);
   $.classList.toggle('hero-gallery-open', tab === 'collection' && collectionMode === 'heroes' && !heroDetailOpen);
@@ -208,6 +213,7 @@ function render() {
       "",
     )}</nav>${storageWarning ? `<p class="storage-notice">${esc(storageWarning)}</p>` : ""}${notice ? `<div class="game-toast" role="status">${esc(notice)}</div>` : ""}`;
   wireWorld($);
+  stopFrames=wireFrameCharacters($,liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches);
   stopCamp=wireCamp($,id=>{selectedHero=id;tab="collection";collectionMode="heroes";heroDetailOpen=true;render();},liteMode);
   wireHeroSwipe($,direction=>$.querySelector(`[data-hero-step="${direction}"]`)?.click());
   $.querySelectorAll("[data-expedition-route]").forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:"expeditionRoute",route:b.dataset.expeditionRoute});notice="本场路线已确定";}));
@@ -809,30 +815,19 @@ function dailyView() {
   return `<section class="daily-board"><div class="section-heading"><div><h2>冒险委托</h2><button class="secondary" data-daily-collect>领取已完成任务</button><p>每日早上 8 点刷新 · 马来西亚时间</p></div><button class="primary" data-task="signin" ${d.signed ? "disabled" : ""}>${d.signed ? "✓ 已签到" : "签到 ✦150"}</button></div>${dailyTasks.map((t) => `<div class="daily-task"><div><b>${t.name}</b><small>${Math.min(d[t.key], t.goal)} / ${t.goal} · ✦${t.gems} ◈${t.coins}</small><progress value="${Math.min(d[t.key], t.goal)}" max="${t.goal}"></progress></div><button class="secondary" data-task="${t.id}" ${d.claimed.includes(t.id) || d[t.key] < t.goal ? "disabled" : ""}>${d.claimed.includes(t.id) ? "已领取" : "领取"}</button></div>`).join("")}</section>`;
 }
 function openHero(id) {
-  const h = heroes[id],
-    owned = !!state.collection[id],
-    cost = starCost(state, id),
-    stars = state.stars?.[id] || 0;
-  const roles = {
-    骑士: "前排减伤，技能为全队增加护盾。",
-    法师: "技能攻击所有敌人，有机会控制前排。",
-    游侠: "技能优先攻击敌方后排。",
-    治疗: "技能恢复生命比例最低的伙伴。",
-    战士: "技能造成强力单体伤害。",
-  };
-  const before = power(state, id),
-    preview = structuredClone(state);
-  preview.stars[id] = stars + 1;
-  preview.collection[id] = Math.max(
-    1,
-    (state.collection[id] || 1) - cost.copies,
-  );
-  const after = power(preview, id);
+  const h = heroes[id];
   const m = modal(
-    `<div class="hero-profile" style="--accent:${rarities[h.rarity].color}">${illustration(h)}<span class="pill">${h.rarity} · ${h.element} · ${h.role} · ${h.faction}</span><h2>${h.name} · ${h.title}</h2><p>${h.story}</p><h3>${h.skill}</h3><p>${roles[h.role]}</p><p class="skill-description">${h.skillDescription}</p><div class="profile-stats"><b>Lv.${level(state, id)}</b><b>⚔ ${power(state, id)}</b><b>${"★".repeat(stars) || "未升星"}</b></div><h3>技能培养 · Lv.${(state.skills[id] || 0) + 1}</h3><p>每次技能培养提高技能强度 6%；三星解锁职业被动：${{ 骑士: "群体护盾", 战士: "吸血", 游侠: "追击", 法师: "破盾", 治疗: "持续恢复" }[h.role]}。</p><div class="hero-growth-actions"><button class="secondary" data-skill-up ${!owned || (state.skills[id] || 0) >= 5 ? "disabled" : ""}>技能升级 · 技能书 ${(state.skills[id] || 0) + 1}</button><button class="secondary" data-exp-use ${!owned || !state.experience || level(state, id) >= 50 ? "disabled" : ""}>经验药剂 +2级 · 剩余 ${state.experience}</button></div><details class="training-reset"><summary>培养重置与返还</summary><p>返还本版本记录的金币、技能书与经验药剂，保留旧版培养基线、星级、角色与装备。</p><button class="secondary" data-training-reset>查看可返还资源</button></details><h3>升星突破 ${stars} / 5</h3>${owned && stars < 5 ? `<div class="growth-preview">⚔ ${before} → <b>${after}</b> <span>+${after - before}</span></div>` : ""}<p>每星 +60 基础战力，扣除重复角色后仍会提升战力。${owned ? `剩余 ${state.collection[id] - 1} 位重复角色` : "尚未招募"}</p><button class="primary" data-star ${!owned || stars >= 5 || state.collection[id] <= cost.copies || state.coins < cost.coins ? "disabled" : ""}>${stars >= 5 ? "已达五星" : `升星 · 重复 ${cost.copies} 位 + ◈${cost.coins}`}</button>${owned && cloud.user ? `<button class="secondary" data-profile-share>${state.supportHero === id ? "✓ 已设为好友支援" : "设为好友支援"}</button>` : ""}<p class="profile-status" role="status"></p><button class="secondary" data-close>返回</button></div>`,
+    growthView(state,id),
     "英雄详情",
   );
   m.dialog.classList.add("v-growth-page");
+  m.dialog.classList.add('core-growth-page');
+  for(const button of m.dialog.querySelectorAll('[data-growth-tab]'))button.onclick=()=>{for(const t of m.dialog.querySelectorAll('[data-growth-tab]'))t.setAttribute('aria-selected',String(t===button));for(const pane of m.dialog.querySelectorAll('[data-growth-pane]'))pane.hidden=pane.dataset.growthPane!==button.dataset.growthTab;};
+  for(const button of m.dialog.querySelectorAll('[data-growth-level]'))button.onclick=()=>run(async()=>{await dispatch({type:'levelBatch',id,count:Number(button.dataset.growthLevel)});m.end();openHero(id);notice='等级与资源已保存';});
+  for(const button of m.dialog.querySelectorAll('[data-growth-source]'))button.onclick=()=>{m.end();tab='adventure';adventureMode='daily';render();};
+  m.dialog.querySelector('[data-growth-summon]').onclick=()=>{m.end();tab='summon';render();};
+  const equipment=m.dialog.querySelector('[data-growth-equipment]');if(equipment)equipment.onclick=()=>{m.end();openEquipmentRevamp(id,revampContext());};
+
     const reset=m.dialog.querySelector('[data-training-reset]');
   if(reset)reset.onclick=()=>{const paid=state.odyssey.spent[id];const confirm=modal(`<h2>重置${h.name}培养？</h2><p>返还金币 ${paid?.coins||0} · 技能书 ${paid?.books||0} · 药剂 ${paid?.experience||0}</p><p>回到 Lv.${paid?.baseLevel||level(state,id)}、技能 Lv.${(paid?.baseSkill??state.skills[id]??0)+1}；星级和装备保留。</p><button class="secondary" data-reset-confirm ${paid?'':'disabled'}>确认重置</button><button class="primary" data-close>保留当前培养</button>`,'培养重置');confirm.dialog.querySelector('[data-reset-confirm]').onclick=()=>{confirm.end();m.end();run(async()=>{await dispatch({type:'trainingReset',id});notice='培养资源已返还';});};};
   for (const [selector, type] of [
@@ -1219,12 +1214,14 @@ function modal(content, label) {
   dialog.innerHTML = content;
   wirePortraitLoading(dialog);
   document.body.append(dialog);
+  const stopModalFrames=wireFrameCharacters(dialog,liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches);
   const timers = [];
   let closed = false;
   const end = () => {
     if (closed) return;
     closed = true;
     timers.forEach(clearTimeout);
+    stopModalFrames();
     dialog.close();
     dialog.remove();
   };
@@ -1282,7 +1279,9 @@ function combatStatsView(outcome) {
       )
       .join("");
   };
-  return `<section class="combat-stats"><h3>本队战斗统计</h3>${side("p")}<details><summary>敌方战斗统计</summary>${side("e")}</details>${outcome.tips?.length ? `<div class="battle-advice"><h3>阵容建议</h3><ul>${outcome.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}</section>`;
+  const allies=rows.filter(r=>r.side==='p');
+  const highlights=[['damage','输出核心'],['healing','治疗贡献'],['shielding','护盾贡献']].map(([key,label])=>{const best=[...allies].sort((a,b)=>b[key]-a[key])[0];return best?.[key]>0?`<span>${label} · ${esc(best.name)} ${best[key].toLocaleString()}</span>`:'';}).join('');
+  return `<section class="combat-stats"><h3>本队战斗统计</h3><div class="combat-highlights">${highlights}</div>${side("p")}<details><summary>敌方战斗统计</summary>${side("e")}</details>${outcome.tips?.length ? `<div class="battle-advice"><h3>阵容建议</h3><ul>${outcome.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}</section>`;
 }
 function showBattle(outcome) {
   const reduced = liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1310,6 +1309,8 @@ function showBattle(outcome) {
   m.dialog.classList.add("battle-fullscreen");
   m.dialog.querySelector("[data-battle-exit]").onclick = m.end;
   const labels = {
+    warning: "首领蓄力",
+    phase: "第二阶段",
     control: "束缚",
     stun: "眩晕",
     ignite: "灼烧",
@@ -1359,6 +1360,11 @@ function showBattle(outcome) {
     actor.classList.remove("attacking");
     void actor.offsetWidth;
     actor.classList.add("attacking");
+    if(!reduced){setFrameMotion(actor,event.heal?"heal":caster?.role==="法师"?"cast":"attack",600/speed);if(event.damage>0)setFrameMotion(target,"hit",300/speed);}
+    m.after(()=>actor.classList.remove('attacking'),450/speed);
+    if(event.status==='warning'){actor.dataset.warning='true';if(!actor.querySelector('.unit-intent'))actor.insertAdjacentHTML('beforeend','<span class="unit-intent">下一回合释放技能</span>');}
+    else if(event.round%3===0){actor.dataset.warning='false';actor.querySelector('.unit-intent')?.remove();}
+
     target.querySelector(".hp-fill").style.width =
       Math.max(0, (event.hp / event.maxHp) * 100) + "%";
     target.querySelector(".unit-hp").textContent = Math.max(0, event.hp);

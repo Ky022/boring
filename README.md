@@ -140,3 +140,9 @@ npm run build:pages
 - 已完成日常任务支持一键领取。未确认云端操作保存原请求 ID，重连或重启后以原 ID 核对，再载入最新存档，避免响应丢失造成重复消费。账号提供轻量模式与保存反馈。
 
 此版本继续使用原数据库和账号，无 SQL 表结构迁移。自动检查覆盖路线防重复恢复、每周轮换与奖励、Boss阶段、每日公会次数、旧存档校验及服务端请求去重。
+
+### Core presentation update (V5)
+
+Cultivation now uses separate level, skill and breakthrough workspaces with real resource costs, five-level previews, cap-aware batch leveling, dungeon resource links and recorded refund previews. Batch upgrades validate the complete cost before changing the save. Equipment replacement previews use actual character power. Initial companions 8–10 have frame-based pixel idle, walking, attack and recovery artwork; the other characters retain their existing sprites. Combat adds a one-round boss skill warning and contribution highlights computed from actual battle statistics. Existing saves and D1 schemas remain compatible.
+
+Visual references: official App Store screenshots and descriptions for Pixel Heroes, AFK Arena, NIKKE and Mobile Legends Adventure; these are presentation references, not a verified current ranking or complete in-game walkthrough.
