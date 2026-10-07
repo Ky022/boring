@@ -150,3 +150,7 @@ Visual references: official App Store screenshots and descriptions for Pixel Her
 ### V6 mobile UI release
 
 All game screens now share a restrained forest/paper presentation. Camp destinations occupy less of the world; hero details use the entire screen with readable names; cultivation tools are secondary; equipment has six pixel item icons and empty-slot acquisition links. Battles have a live party portrait/health strip and a full-height encounter field. Campaign, summon, dungeons, rewards, guild, chat, friends, arena and account use matching controls and typography. See `UI-REDESIGN.md` for coverage and validation. Existing saves and database schemas are retained; no reward or cultivation balance changes are introduced in this UI release.
+
+### V7 original art and combat presentation
+
+The central camp now uses original pixel environment artwork with functional building shortcuts. Hero skills use an original twelve-icon atlas mapped to role and element. Static card poses are consistent with the original hero atlas; timed action frames begin at the first pose. Combat plays contiguous area effects together and adds travelling role effects, on-target healing/shields and lower-contrast backgrounds. Cultivation includes computed basic-life improvement previews. All existing saves and the database schema remain unchanged. Level sharing and expanded endgame mechanics are not part of this release.

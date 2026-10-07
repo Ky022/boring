@@ -14,3 +14,9 @@ All screens share the `mobile` CSS layer, declared after existing layers in `mob
 - Combat: full-height battlefield, live six-member portrait/health/action strip, landscape corresponding to encounter, no large return button during animation. Results expose the return button. Enemy damage, rewards and saves still use the authoritative combat result.
 
 Validation: domain suite, 320×568 and 390×844 browser operation checks, gallery selection, ticket ten-pull, three formation drag operations, equipment buy/equip/enhance, live battle HUD, cloud reload, two-account guild/friends/chat/arena, committed-action response-loss recovery. Screenshots reviewed for core scenes and welfare/community.
+
+## V7 art and combat follow-up
+
+Original pixel camp artwork reserves an open ground plane for companions, with tavern/training/smith shortcuts tied to existing navigation. Twelve original spell illustrations replace generic skill symbols through a role/element mapping. The original hero atlas supplies resting poses so action-sheet edges do not appear in card and equipment screens; the initial trio uses timed action frames in battle and while walking. Actions begin at their anticipation frame rather than a global-clock offset. Battle presentation groups contiguous multi-target results without changing their order or the authoritative outcome; role projectiles, recovery and shield effects distinguish actions. Background contrast is reduced so actors and numbers stand out. Cultivation previews show actual basic-life changes as well as power changes.
+
+This release retains all 38 approved hero portraits and saves. It does not add level sharing or claim that all 38 heroes have full animation sets. Those are separate gameplay/content targets.

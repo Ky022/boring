@@ -1,3 +1,5 @@
+import './polish.css';
+import {skillArt,actionGroups} from './art-direction.js';
 import './mobile-redesign.css';
 import {wireFrameCharacters,setFrameMotion} from './frame-motion.js';
 import './core-ui.css';
@@ -199,7 +201,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V6</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V7</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -323,7 +325,7 @@ function render() {
     const skill = heroSkills(heroes[selectedHero])[Number(b.dataset.heroSkill)];
     const demo=simulateCombat([combatTeam(state).find(u=>u.id===selectedHero)||{...heroes[selectedHero],power:100,position:0}],[{name:"训练木偶",role:"骑士",element:"风",power:180}],()=>.99);
     const previewEvents=demo.events.filter(e=>e.actor==="p0"&&e.round===3);
-    modal(`<div class="hero-info-dialog"><div class="v-skill-preview">${sprite(heroes[selectedHero])}<span>→</span>${monster(0)}</div><small>技能演示 · 第三回合释放</small><p>${previewEvents.map(e=>esc(e.skill)).filter((v,i,a)=>a.indexOf(v)===i).join(" · ")||"请在战斗中查看技能效果"}</p>${gameIcon(skill.icon)}<small>英雄技能</small><h2>${skill.name}</h2><p>${skill.text}</p><button class="primary" data-close>关闭</button></div>`, skill.name);
+    modal(`<div class="hero-info-dialog"><div class="v-skill-preview">${sprite(heroes[selectedHero])}<span>→</span>${monster(0)}</div><small>技能演示 · 第三回合释放</small><p>${previewEvents.map(e=>esc(e.skill)).filter((v,i,a)=>a.indexOf(v)===i).join(" · ")||"请在战斗中查看技能效果"}</p>${skillArt(heroes[selectedHero],Number(b.dataset.heroSkill))}<small>英雄技能</small><h2>${skill.name}</h2><p>${skill.text}</p><button class="primary" data-close>关闭</button></div>`, skill.name);
   });
   $.querySelectorAll('[data-hero-story]').forEach(b => b.onclick = () => {
     const h = heroes[Number(b.dataset.heroStory)];
@@ -1362,6 +1364,16 @@ function showBattle(outcome) {
     actor.classList.remove("attacking");
     void actor.offsetWidth;
     actor.classList.add("attacking");
+    if(!reduced&&actor!==target&&(event.damage>0||event.heal||event.shield)){
+      const box=m.dialog.getBoundingClientRect(),a=actor.getBoundingClientRect(),t=target.getBoundingClientRect();
+      const fx=document.createElement('i');fx.className='role-projectile';fx.dataset.role=event.heal?'治疗':event.shield?'骑士':caster?.role||'战士';
+      fx.style.left=(a.left+a.width/2-box.left)+'px';fx.style.top=(a.top+a.height*.5-box.top)+'px';m.dialog.append(fx);
+      fx.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${t.left+t.width/2-a.left-a.width/2}px,${t.top+t.height*.5-a.top-a.height*.5}px)`,opacity:.4}],{duration:Math.max(100,300/speed),fill:'forwards'});
+      m.after(()=>fx.remove(),350/speed);
+    }
+    target.dataset.effect=event.heal?'heal':event.shield?'shield':event.damage>0?'hit':'';
+    m.after(()=>delete target.dataset.effect,500/speed);
+
     if(!reduced){setFrameMotion(actor,event.heal?"heal":caster?.role==="法师"?"cast":"attack",600/speed);if(event.damage>0)setFrameMotion(target,"hit",300/speed);}
     m.after(()=>actor.classList.remove('attacking'),450/speed);
     if(event.status==='warning'){actor.dataset.warning='true';if(!actor.querySelector('.unit-intent'))actor.insertAdjacentHTML('beforeend','<span class="unit-intent">下一回合释放技能</span>');}
@@ -1410,13 +1422,13 @@ function showBattle(outcome) {
   }
   let index = 0,
     finished = false;
-  const events = outcome.events || [],
-    step = Math.min(240, Math.max(15, 9000 / Math.max(1, events.length)));
+  const events = outcome.events || [], groups=actionGroups(events),
+    step = Math.min(650, Math.max(300, 12000 / Math.max(1, groups.length)));
   function finish() {
     m.dialog.querySelector(".battle-cinema").classList.add("finished");
     if (finished) return;
     finished = true;
-    index = events.length;
+    index = groups.length;
     for (const u of units) {
       const node = m.dialog.querySelector(`[data-unit="${u.unitId}"]`);
       node.querySelector(".hp-fill").style.width =
@@ -1438,11 +1450,11 @@ function showBattle(outcome) {
   }
   function advance() {
     if (finished) return;
-    if (index >= events.length) {
+    if (index >= groups.length) {
       finish();
       return;
     }
-    animate(events[index++]);
+    for(const event of groups[index++].events)animate(event);
     m.after(advance, step / speed);
   }
   m.dialog.querySelectorAll("[data-speed]").forEach(
