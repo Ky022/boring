@@ -1,3 +1,4 @@
+import './mobile-redesign.css';
 import {wireFrameCharacters,setFrameMotion} from './frame-motion.js';
 import './core-ui.css';
 import {growthView} from './growth-ui.js';
@@ -160,6 +161,7 @@ function revampContext() {
     setNotice: (v) => (notice = v),
     showBattle,
     isBusy: () => busy,
+    navigateEquipment: destination => {if(destination==='daily'){tab='adventure';adventureMode='daily';}else{tab='collection';collectionMode='forge';}render();if(destination==='shop')$.querySelector('[data-forge-panel="shop"]')?.click();},
   };
 }
 let stopFrames=()=>{};
@@ -197,7 +199,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V4</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V6</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -1303,7 +1305,7 @@ function showBattle(outcome) {
           ? "ELITE " + outcome.stage
           : "CHAPTER " + (outcome.stage || state.stage);
   const m = modal(
-    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene("formation-court")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="combat-outcome" hidden><h2>${outcome.raid?"贡献已记录":outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.raid?`共同首领伤害 ${outcome.damage} · ${outcome.defeated?"首领击败！":"伙伴们继续加油。"}`:outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : outcome.raid?"公会":tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
+    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene(outcome.opponent?"formation-court":"battle-forest")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="mobile-party-hud">${outcome.players.map(u=>`<article data-hud-unit="${u.unitId}"><img class="mobile-hud-portrait" src="${new URL(`art/hero-${u.id}.webp`,document.baseURI).href}" alt=""><b>${esc(u.name)}</b><progress max="${u.maxHp}" value="${u.initialHp}"></progress><small>Lv.${u.level||level(state,u.id)}</small></article>`).join("")}</div><div class="combat-outcome" hidden><h2>${outcome.raid?"贡献已记录":outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.raid?`共同首领伤害 ${outcome.damage} · ${outcome.defeated?"首领击败！":"伙伴们继续加油。"}`:outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : outcome.raid?"公会":tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
     "自动战斗与统计",
   );
   m.dialog.classList.add("battle-fullscreen");
@@ -1368,6 +1370,9 @@ function showBattle(outcome) {
     target.querySelector(".hp-fill").style.width =
       Math.max(0, (event.hp / event.maxHp) * 100) + "%";
     target.querySelector(".unit-hp").textContent = Math.max(0, event.hp);
+    for(const n of m.dialog.querySelectorAll('[data-hud-unit]'))n.classList.toggle('active',n.dataset.hudUnit===event.actor);
+    const hud=m.dialog.querySelector(`[data-hud-unit="${event.target}"]`);if(hud){hud.querySelector('progress').value=Math.max(0,event.hp);hud.classList.toggle('down',event.hp===0);}
+
     target.classList.toggle("fallen", event.hp === 0);
     const number = target.querySelector(".unit-damage");
     number.textContent = event.revive
@@ -1408,6 +1413,7 @@ function showBattle(outcome) {
   const events = outcome.events || [],
     step = Math.min(240, Math.max(15, 9000 / Math.max(1, events.length)));
   function finish() {
+    m.dialog.querySelector(".battle-cinema").classList.add("finished");
     if (finished) return;
     finished = true;
     index = events.length;

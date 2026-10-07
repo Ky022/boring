@@ -146,3 +146,7 @@ npm run build:pages
 Cultivation now uses separate level, skill and breakthrough workspaces with real resource costs, five-level previews, cap-aware batch leveling, dungeon resource links and recorded refund previews. Batch upgrades validate the complete cost before changing the save. Equipment replacement previews use actual character power. Initial companions 8–10 have frame-based pixel idle, walking, attack and recovery artwork; the other characters retain their existing sprites. Combat adds a one-round boss skill warning and contribution highlights computed from actual battle statistics. Existing saves and D1 schemas remain compatible.
 
 Visual references: official App Store screenshots and descriptions for Pixel Heroes, AFK Arena, NIKKE and Mobile Legends Adventure; these are presentation references, not a verified current ranking or complete in-game walkthrough.
+
+### V6 mobile UI release
+
+All game screens now share a restrained forest/paper presentation. Camp destinations occupy less of the world; hero details use the entire screen with readable names; cultivation tools are secondary; equipment has six pixel item icons and empty-slot acquisition links. Battles have a live party portrait/health strip and a full-height encounter field. Campaign, summon, dungeons, rewards, guild, chat, friends, arena and account use matching controls and typography. See `UI-REDESIGN.md` for coverage and validation. Existing saves and database schemas are retained; no reward or cultivation balance changes are introduced in this UI release.

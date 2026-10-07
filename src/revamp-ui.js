@@ -29,22 +29,15 @@ export function illustration(h, small = false) {
   return `<span class="hero-illustration painted-character standalone-portrait" role="img" aria-label="${h.name}高清角色立绘"><svg viewBox="0 0 2 3" preserveAspectRatio="xMidYMin slice" aria-hidden="true" overflow="hidden"><image href="${url}" width="2" height="3"/></svg></span>`;
 }
 export function itemIcon(i) {
-  const color = ["#a5b5c6", "#76cfe8", "#bf91ff", "#ffcf78"][i.quality];
-  const shapes = {
-    weapon: "M12 3L22 3L17 22L10 28L7 25L12 20Z M5 23L14 30 M9 27L4 34",
-    body: "M10 5L16 9L22 5L29 12L24 18L23 33L9 33L8 18L3 12Z",
-    head: "M6 29L6 15Q16 1 26 15L26 29L21 31L21 20L11 20L11 31Z",
-    legs: "M9 5L24 5L26 33L18 33L16 17L14 33L6 33Z",
-    feet: "M12 5L24 5L23 23L28 27L28 33L6 33L6 27L12 22Z",
-    charm: "M7 8Q16 0 25 8L23 14L16 22L9 14Z M16 20L24 29L16 36L8 29Z",
-  };
-  return `<svg class="item-icon" viewBox="0 0 36 40" aria-hidden="true"><path d="${shapes[i.slot]}" fill="${color}" stroke="#18223c" stroke-width="2"/><path d="M13 10L17 10" stroke="#fff" stroke-width="2"/></svg>`;
+  const index={weapon:0,body:1,head:2,legs:3,feet:4,charm:5}[i.slot]??0;
+  const url=new URL('art/equipment-icons.webp',document.baseURI).href;
+  return `<svg class="item-icon" viewBox="${index%3*100} ${Math.floor(index/3)*100} 100 100" overflow="hidden" aria-hidden="true"><image href="${url}" width="300" height="200"/></svg>`;
 }
 export function equipmentSlots(s, id) {
   return `<div class="six-equipment">${slots
     .map((slot) => {
       const i = s.items.find((i) => i.id === s.loadouts[id]?.[slot]);
-      return `<button data-equip="${id}" data-equip-slot="${slot}" class="q${i?.quality ?? 0}" aria-label="${slotNames[slot]}">${i ? itemIcon(i) : `<span>${{ weapon: "⚔", body: "♜", head: "♛", legs: "Ⅱ", feet: "➶", charm: "✦" }[slot]}</span>`}<small>${slotNames[slot]}${i ? ` +${i.level}` : ""}</small></button>`;
+      return `<button data-equip="${id}" data-equip-slot="${slot}" class="q${i?.quality ?? 0} ${i?'':'empty'}" aria-label="${slotNames[slot]}">${itemIcon(i||{slot,quality:0})}<small>${slotNames[slot]}${i ? ` +${i.level}` : ""}</small></button>`;
     })
     .join("")}</div>`;
 }
@@ -377,7 +370,7 @@ export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
                   const delta=power(preview,id)-power(s,id);
                   return `<button class="equipment-choice q${i.quality}" data-loadout-item="${i.id}" data-slot="${slot}" ${owner && Number(owner[0]) !== id ? "disabled" : ""}>${itemIcon(i)}<span><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${itemStatText(i)}<br><strong class="equip-delta ${delta>=0?'positive':'negative'}">替换后战力 ${delta >= 0 ? "+" : ""}${delta}</strong> · ${sets[i.set]}套<br>${Object.entries(itemStats(i)).filter(([,n])=>n>0).map(([k,n])=>{const diff=(n-(equipped?itemStats(equipped)[k]:0))*100;return `${{attack:'攻击',hp:'生命',crit:'暴击',heal:'治疗'}[k]} ${diff>=0?'+':''}${diff.toFixed(1)}%`;}).join(' · ')}</small><small>${owner ? `${heroes[+owner[0]].name}穿戴中` : "可穿戴"}</small></span>${current[slot] === i.id ? "✓" : ""}</button><button class="v-direct-forge secondary" data-direct-forge="${i.id}" ${i.level>=10?'disabled':''}>强化 +${i.level} → +${Math.min(10,i.level+1)} · ${(i.level+1)*100}金币 + ${i.level+1}强化石</button>`;
                 })
-                .join("") || "<p>暂无此部位装备，去日常副本或工坊获取。</p>"
+                .join("") || `<div class="equipment-empty">${gameIcon('robe')}<p>这个部位还没有装备</p><button class="primary" data-equipment-source="daily">去副本获取</button><button class="secondary" data-equipment-source="shop">选购旅行装备</button></div>`
             }</section>`,
         )
         .join(
@@ -386,6 +379,7 @@ export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
       "六部位装备配置",
     );
   m.dialog.classList.add("equipment-dialog", "revamped-equipment");
+  for(const button of m.dialog.querySelectorAll('[data-equipment-source]'))button.onclick=()=>{m.end();ctx.navigateEquipment(button.dataset.equipmentSource);};
   m.dialog.querySelectorAll("[data-equip-slot]").forEach(
     (b) =>
       (b.onclick = () => {
