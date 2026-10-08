@@ -1,3 +1,7 @@
+import './endgame.css';
+import {difficultyView,randomRelicView,collectionChallengeView} from './endgame-ui.js';
+import {endgameState,skins} from './endgame.js';
+let difficultyMode='hard',difficultyStage=1;
 import './cute-ui.css';
 import './refinement.css';
 import './polish.css';
@@ -201,7 +205,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V10</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" style="border-color:${skins[endgameState(state).skin]?.color||'#e7d2a1'}" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${esc(endgameState(state).title)||(cloud.user?'云端存档':'游客存档')} · V11</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -216,10 +220,21 @@ function render() {
     .join(
       "",
     )}</nav>${storageWarning ? `<p class="storage-notice">${esc(storageWarning)}</p>` : ""}${notice ? `<div class="game-toast" role="status">${esc(notice)}</div>` : ""}`;
+  $.querySelector('.endgame-page .scene-tabs .active')?.scrollIntoView({block:'nearest',inline:'nearest'});
   wireWorld($);
   stopCamp=wireCamp($,id=>{selectedHero=id;tab="collection";collectionMode="heroes";heroDetailOpen=true;render();},liteMode);
   wireHeroSwipe($,direction=>$.querySelector(`[data-hero-step="${direction}"]`)?.click());
   $.querySelectorAll("[data-expedition-route]").forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:"expeditionRoute",route:b.dataset.expeditionRoute});notice="本场路线已确定";}));
+  $.querySelectorAll('[data-difficulty-mode]').forEach(b=>b.onclick=()=>{difficultyMode=b.dataset.difficultyMode;difficultyStage=Math.min(36,endgameState(state)[difficultyMode]+1);render();});
+  const ds=$.querySelector('[data-difficulty-stage]');if(ds)ds.onchange=()=>{difficultyStage=Number(ds.value);render();};
+  $.querySelectorAll('[data-difficulty-fight]').forEach(b=>b.onclick=()=>run(async()=>{const r=await dispatch({type:'difficultyFight',mode:b.dataset.difficultyFight,stage:Number(b.dataset.difficultyLevel)});if(r.won)difficultyStage=r.nextDifficultyStage;showBattle(r);}));
+  $.querySelectorAll('[data-collection-fight]').forEach(b=>b.onclick=()=>run(async()=>showBattle(await dispatch({type:'collectionFight',id:b.dataset.collectionFight}))));
+  const rs=$.querySelector('[data-relic-start]');if(rs)rs.onclick=()=>run(async()=>{await dispatch({type:'relicStart'});notice='新的遗迹路线已生成';});
+  $.querySelectorAll('[data-relic-route]').forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:'relicRoute',route:b.dataset.relicRoute});}));
+  $.querySelectorAll('[data-relic-boon]').forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:'relicBoon',id:b.dataset.relicBoon});notice='强化已生效';}));
+  const rf=$.querySelector('[data-relic-fight]');if(rf)rf.onclick=()=>run(async()=>showBattle(await dispatch({type:'relicFight'})));
+  const title=$.querySelector('[data-endgame-title]');if(title)title.onchange=()=>run(async()=>{await dispatch({type:'cosmeticEquip',title:title.value});});
+  const skin=$.querySelector('[data-endgame-skin]');if(skin)skin.onchange=()=>run(async()=>{await dispatch({type:'cosmeticEquip',skin:skin.value});});
   const weekFight=$.querySelector("[data-weekly-fight]");if(weekFight)weekFight.onclick=()=>run(async()=>{const r=await dispatch({type:"weeklyFight"});showBattle(r);notice=r.won?"本周挑战进度已保存":"可以调整阵容后重试";});
   const collect=$.querySelector("[data-daily-collect]");if(collect)collect.onclick=()=>run(async()=>{const r=await dispatch({type:"dailyCollect"});notice=`任务领取：${r.gems}星钻 · ${r.coins}金币`;});
   const lite=$.querySelector("[data-lite-mode]");if(lite)lite.onclick=()=>{liteMode=!liteMode;try{localStorage.setItem("astral-lite-mode",liteMode?"1":"0");}catch{}render();};
@@ -272,6 +287,7 @@ function render() {
     (b) =>
       (b.onclick = () => {
         adventureMode = b.dataset.adventureMode;
+        if(adventureMode==='challenge')difficultyStage=Math.min(36,endgameState(state)[difficultyMode]+1);
         tab="adventure";
         render();
       }),
@@ -796,14 +812,19 @@ function adventureView() {
     ["expedition", "遗迹远征"],
     ["daily", "日常副本"],
     ["tower", "试炼塔"],
-    ["weekly", "每周"],
+    ["weekly", "随机遗迹"],
+    ["challenge", "困难／噩梦"],
+    ["collectionTrial", "收藏试炼"],
   ]
     .map(
       ([k, n]) =>
         `<button data-adventure-mode="${k}" class="${adventureMode === k ? "active" : ""}">${n}</button>`,
     )
     .join("")}</div>`;
-  if (adventureMode === "weekly") return voyageWeeklyView(state,nav);
+  if (adventureMode === "weekly") return randomRelicView(state,nav);
+  if(adventureMode==='weeklyLegacy')return voyageWeeklyView(state,nav);
+  if(adventureMode==='challenge')return difficultyView(state,nav,difficultyMode,difficultyStage);
+  if(adventureMode==='collectionTrial')return collectionChallengeView(state,nav);
   if (adventureMode === "expedition") return expeditionView(state,nav);
   if (adventureMode === "daily")
     return `<div class="adventure-subscreen">${nav}${dungeonView(state)}</div>`;
@@ -1295,7 +1316,13 @@ function showBattle(outcome) {
   const units = [...outcome.players, ...outcome.enemies];
   const unit = (u, enemy, index) =>
     `<div class="combat-unit ${enemy ? "enemy-unit" : "ally-unit"}" data-unit="${u.unitId}" style="grid-column:${enemy ? ((u.position ?? index) < 3 ? 1 : 2) : ((u.position ?? index) < 3 ? 2 : 1)};grid-row:${((u.position ?? index) % 3) + 1}">${enemy && !outcome.opponent ? monster(u.kind || 0) : sprite(heroes[u.id])}<b>${esc(u.name)}${u.support ? " · 支援" : ""}</b><div class="hp-track"><div class="hp-fill"></div></div><small class="unit-hp">${u.maxHp}</small><span class="unit-damage"></span></div>`;
-  const title = outcome.opponent
+  const title = outcome.difficulty
+    ? (outcome.difficulty==='hard'?'困难主线':'噩梦主线')+' · 第'+outcome.stage+'关'
+    : outcome.collectionTrial
+      ? '收藏试炼 · '+outcome.collectionTrial
+      : outcome.randomRelic
+        ? '随机遗迹 · 第'+Math.min(9,outcome.floor+(outcome.won?0:1))+'场'
+        : outcome.opponent
     ? "ARENA · " + esc(outcome.opponent)
     : outcome.floor
       ? "TOWER " + outcome.floor
@@ -1305,7 +1332,7 @@ function showBattle(outcome) {
           ? "ELITE " + outcome.stage
           : "CHAPTER " + (outcome.stage || state.stage);
   const m = modal(
-    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene(outcome.opponent?"formation-court":"battle-forest")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="mobile-party-hud">${outcome.players.map(u=>`<article data-hud-unit="${u.unitId}"><div class="mobile-hud-portrait">${sprite(heroes[u.id])}</div><b>${esc(u.name)}</b><progress max="${u.maxHp}" value="${u.initialHp}"></progress><small>Lv.${u.level||level(state,u.id)}</small></article>`).join("")}</div><div class="combat-outcome" hidden><h2>${outcome.raid?"贡献已记录":outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.raid?`共同首领伤害 ${outcome.damage} · ${outcome.defeated?"首领击败！":"伙伴们继续加油。"}`:outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : outcome.raid?"公会":tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
+    `<div class="battle-cinema"><div class="cinema-heading"><small>${title}</small><h2>${outcome.boss?'首领挑战':'小队出击'}</h2></div><button class="battle-exit" data-battle-exit aria-label="返回游戏">×</button><div class="combat-controls"><span>自动战斗</span>${[1, 2, 4].map((n) => `<button class="secondary ${speed === n ? "selected" : ""}" data-speed="${n}" aria-pressed="${speed === n}">×${n}</button>`).join("")}<button class="secondary" data-skip>跳过动画</button></div><div class="combat-arena">${worldScene(outcome.opponent?"formation-court":"battle-forest")}<div class="combat-party">${outcome.players.map((u, i) => unit(u, false, i)).join("")}</div><div class="combat-enemies">${outcome.enemies.map((u, i) => unit(u, true, i)).join("")}</div><span class="round-counter">AUTO · ROUND 1</span><div class="skill-cut-in" hidden></div></div><p class="combat-log" role="status">伙伴们已做好准备……</p><div class="mobile-party-hud">${outcome.players.map(u=>`<article data-hud-unit="${u.unitId}"><div class="mobile-hud-portrait">${sprite(heroes[u.id])}</div><b>${esc(u.name)}</b><progress max="${u.maxHp}" value="${u.initialHp}"></progress><small>Lv.${u.level||level(state,u.id)}</small></article>`).join("")}</div><div class="combat-outcome" hidden><h2>${outcome.raid?"贡献已记录":outcome.won ? "挑战成功" : "暂时撤退"}</h2><p>${outcome.raid?`共同首领伤害 ${outcome.damage} · ${outcome.defeated?"首领击败！":"伙伴们继续加油。"}`:outcome.won ? "伙伴们凯旋归来！" : "暂时撤退，培养伙伴后再战。"} ✦ +${outcome.reward || 0} · ◈ +${outcome.coins || 0}</p>${outcome.loot ? `<p class="loot-reward">${rewardText(Object.fromEntries(Object.entries(outcome.loot).filter(([k]) => k !== "item")))}${outcome.loot.item ? " · 装备：" + outcome.loot.item.name : ""}</p>` : ""}${outcome.conditionFailed?`<p class="endgame-condition">战斗获胜，但未满足挑战条件：${esc(outcome.condition)}</p>`:''}${outcome.stars?`<p class="r-result-stars">${'★'.repeat(outcome.stars)}${'☆'.repeat(3-outcome.stars)} · 主线评级</p>`:''}${outcome.expedition?`<p>遗迹 ${outcome.node}/6 · ${outcome.loot?.shards?`结算 ${outcome.loot.shards}碎片、${outcome.loot.tickets}张券`:'返回后继续远征或选择祝福'}</p>`:''}${outcome.nextStage && outcome.won ? `<p>已选中第 ${outcome.nextStage} 关，返回后可继续挑战。</p>` : ""}${combatStatsView(outcome)}</div><button class="primary" data-close>返回${outcome.opponent ? "竞技场" : outcome.raid?"公会":tab === "collection" && collectionMode === "formation" ? "阵容" : "冒险"}</button></div>`,
     "自动战斗与统计",
   );
   m.dialog.classList.add("battle-fullscreen");

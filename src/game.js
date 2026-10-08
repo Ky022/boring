@@ -1,3 +1,4 @@
+import {endgameFresh,endgameAction,validEndgame} from './endgame.js';
 import { weeklyAction } from './weekly-trial.js';
 import { ensureOdyssey, odysseyAction, recordSpent } from "./odyssey.js";
 import {
@@ -274,6 +275,7 @@ export const gear = [
 export function fresh() {
   return {
     ...expansionFresh(),
+    endgame:endgameFresh(),
     version: 2,
     gems: 3000,
     coins: 1000,
@@ -509,6 +511,8 @@ export function applyAction(state, action, rng = Math.random, support = null) {
     recordSpent(state,id,'coins',cost);state.coins-=cost;state.levels[id]=before+steps;dailyState(state).upgrades+=steps;
     return {id,before,level:before+steps,cost};
   }
+  const late=endgameAction(state,action,rng,{heroes,combatTeam,simulateCombat,dailyState});
+  if(late.handled)return late.result;
   const extended = odysseyAction(state,action,rng,{heroes,power,combatTeam,simulateCombat,dailyState});
   if(extended.handled)return extended.result;
   const week = weeklyAction(state, action, rng, {heroes,combatTeam,simulateCombat,dailyState});
@@ -597,7 +601,7 @@ export function validSave(s) {
     !(
       s &&
       s.version === 2 &&
-      validExpansion(s) &&
+      validExpansion(s) && validEndgame(s.endgame) &&
       Number.isSafeInteger(s.gems) &&
       s.gems >= 0 &&
       Number.isSafeInteger(s.coins) &&

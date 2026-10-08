@@ -677,5 +677,15 @@ test("database accounts, cloud progress, guild cooperation, chat and arena", asy
     await call("/logout", eve.token, {});
     assert.equal((await call("/me", eve.token)).status, 401);
   });
+  await t.test("endgame rewards are authoritative, replay-safe and survive relogin",async()=>{
+    const account=await call('/register',null,{username:'EndgamePlayer',password:'testpass123'});
+    const state=structuredClone(account.state);state.cleared=36;state.stage=36;state.team=[8,9,10,11];state.formation=[8,9,10,11,null,null];for(const id of state.team){state.collection[id]=11;state.levels[id]=50;state.stars[id]=5;}
+    sqlite.prepare('UPDATE players SET state_json=? WHERE account_id=?').run(JSON.stringify(state),account.user.id);
+    let current=await call('/me',account.token);const command={requestId:crypto.randomUUID(),revision:current.revision,action:{type:'collectionFight',id:'rookies'}};
+    const result=await call('/action',account.token,command);assert.equal(result.status,200);assert.equal(result.result.won,true);assert.ok(result.state.endgame.trials.includes('rookies'));
+    const replay=await call('/action',account.token,command);assert.deepEqual(replay,result);
+    const login=await call('/login',null,{username:'EndgamePlayer',password:'testpass123'});assert.deepEqual(login.state.endgame,result.state.endgame);
+    current=await call('/me',login.token);const locked=await call('/action',login.token,{requestId:crypto.randomUUID(),revision:current.revision,action:{type:'difficultyFight',mode:'nightmare',stage:1}});assert.equal(locked.status,400);assert.equal((await call('/me',login.token)).revision,current.revision);
+  });
   sqlite.close();
 });
