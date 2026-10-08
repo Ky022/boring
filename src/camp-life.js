@@ -10,7 +10,7 @@ export function wireCamp(root,openHero,lowMotion=false){
  for(const [index,node]of people.entries()){
   const id=Number(node.dataset.campHero),h=heroes[id],count=node.parentElement.children.length;
   let phase=0,paused=false;
-  const place=()=>{const p=campPoint(index%count,count,phase);node.style.left=p.x+'%';node.style.top=p.y+'px';};place();
+  const place=()=>{const order=index%count,lanes=count>3?2:1,columns=Math.ceil(count/lanes);node.style.left=((order%columns+.5)*100/columns+Math.sin(phase+order)*1.5)+'%';node.style.top=(Math.floor(order/columns)*55+Math.cos(phase+order)*3)+'%';node.style.zIndex=String(2+Math.floor(order/columns));};place();
   const wander=()=>{if(!node.isConnected)return;if(!document.hidden&&!paused&&!node.closest('.r-home')?.querySelector('.home-drawer')){phase+=1.3;node.classList.toggle('camp-facing-left',Math.sin(phase+index)<0);node.classList.add('camp-walking');place();schedule(()=>node.classList.remove('camp-walking'),1600);}schedule(wander,3500+(index%3)*700);};
   if(!reduced)schedule(wander,900+(index%6)*350);
   node.onclick=()=>{paused=true;node.classList.remove('camp-walking');root.querySelector('.camp-dialogue')?.remove();const bubble=document.createElement('div');bubble.className='camp-dialogue';bubble.innerHTML=`<b>${h.name}</b><p>${lines[h.role]}</p><button>${gameIcon('collection')}查看伙伴 ›</button><button class="camp-dialogue-close" aria-label="关闭对话">×</button>`;node.closest('.r-home').append(bubble);bubble.querySelector('button').onclick=()=>openHero(id);bubble.querySelector('.camp-dialogue-close').onclick=()=>{bubble.remove();paused=false;};schedule(()=>{bubble.remove();paused=false;},6000);};
