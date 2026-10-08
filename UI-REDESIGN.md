@@ -20,3 +20,11 @@ Validation: domain suite, 320×568 and 390×844 browser operation checks, galler
 Original pixel camp artwork reserves an open ground plane for companions, with tavern/training/smith shortcuts tied to existing navigation. Twelve original spell illustrations replace generic skill symbols through a role/element mapping. The original hero atlas supplies resting poses so action-sheet edges do not appear in card and equipment screens; the initial trio uses timed action frames in battle and while walking. Actions begin at their anticipation frame rather than a global-clock offset. Battle presentation groups contiguous multi-target results without changing their order or the authoritative outcome; role projectiles, recovery and shield effects distinguish actions. Background contrast is reduced so actors and numbers stand out. Cultivation previews show actual basic-life changes as well as power changes.
 
 This release retains all 38 approved hero portraits and saves. It does not add level sharing or claim that all 38 heroes have full animation sets. Those are separate gameplay/content targets.
+
+## V8 refinement of existing features
+
+Prototype action-sheet switching is removed from runtime. All 38 heroes retain one consistent original sprite model, with small translate-only attack/cast/walk effects. Battle presentation separates wind-up/projectile travel from hit results, updates health only at impact, emits one sound per grouped action and shows absorbed hits as shield blocks. Skipping cancels delayed hit results and removes transient effects before setting the authoritative final state. Existing combat calculations and rewards are unchanged.
+
+Cultivation retains the selected tab after an upgrade. Equipment slots expose their selected state; enhancement is disabled when coins or stones are insufficient. Phone typography, spacing and roster touch surfaces are simplified. No new gameplay systems or schema changes.
+
+Additional verification: recorded 320×568 and 390×844 browser sessions checked stable sprites, retained skill tab, slot selection, material guards, impact timing and skip during a travelling projectile. Existing domain and mobile checks remain in use.

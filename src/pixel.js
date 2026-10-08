@@ -20,9 +20,7 @@ export function pixelCharacter(hero, classes = "") {
   const cols = [0, 172, 345, 518, 700, 876, 1055, 1235, 1403], col = hero.id % 8;
   const bounds = `x="${cols[col]+14}" y="${rows[row]}" width="${hero.id === 0 ? 130 : cols[col+1]-cols[col]-28}" height="${rows[row+1]-rows[row]}"`;
   const staticArt = `<span class="pixel-character ${classes}" role="img" aria-label="${hero.name} · ${hero.title}" style="--sprite-x:${col / 7 * 100}%;--sprite-y:${row / 4 * 100}%"><svg viewBox="${cols[col]} ${rows[row]} ${cols[col + 1] - cols[col]} ${rows[row + 1] - rows[row]}" aria-hidden="true" overflow="hidden"><defs><clipPath id="pixel-clip-${hero.id}"><rect ${bounds}/></clipPath></defs><image href="${url}" width="1403" height="1121" clip-path="url(#pixel-clip-${hero.id})"/></svg></span>`;
-  if(hero.id<8||hero.id>10)return staticArt;
-  const sheet=new URL('art/starter-actions.webp',document.baseURI).href;
-  return `<span class="pixel-character frame-character ${classes}" data-frame-hero="${hero.id}" role="img" aria-label="${hero.name} · ${hero.title}"><span class="static-pose">${staticArt}</span><svg class="action-pose" viewBox="0 ${(hero.id-8)*2*1024/6+24} ${1024/6-12} ${1024/6-40}" overflow="hidden" aria-hidden="true"><image href="${sheet}" width="1024" height="1024"/></svg></span>`;
+  return staticArt;
 
 }
 export function sprite(hero, { background = false, enemy = false } = {}) {

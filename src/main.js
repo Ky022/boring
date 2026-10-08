@@ -1,7 +1,7 @@
+import './refinement.css';
 import './polish.css';
 import {skillArt,actionGroups} from './art-direction.js';
 import './mobile-redesign.css';
-import {wireFrameCharacters,setFrameMotion} from './frame-motion.js';
 import './core-ui.css';
 import {growthView} from './growth-ui.js';
 import './voyage.css';
@@ -57,6 +57,7 @@ import {
   mutate,
   bootCloud,
 } from "./cloud.js";
+let growthPanel="level";
 const key = "astral-cards-v1";
 let state = fresh(),
   tab = "home",
@@ -166,12 +167,10 @@ function revampContext() {
     navigateEquipment: destination => {if(destination==='daily'){tab='adventure';adventureMode='daily';}else{tab='collection';collectionMode='forge';}render();if(destination==='shop')$.querySelector('[data-forge-panel="shop"]')?.click();},
   };
 }
-let stopFrames=()=>{};
 let stopCamp=()=>{};
 let liteMode=false;try{liteMode=localStorage.getItem("astral-lite-mode")==="1";}catch{}
 function render() {
   stopCamp();
-  stopFrames();
   document.body.classList.toggle("lite-mode",liteMode);
   $.classList.toggle('hero-detail-open', tab === 'collection' && collectionMode === 'heroes' && heroDetailOpen);
   $.classList.toggle('hero-gallery-open', tab === 'collection' && collectionMode === 'heroes' && !heroDetailOpen);
@@ -201,7 +200,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V7</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V8</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -217,7 +216,6 @@ function render() {
       "",
     )}</nav>${storageWarning ? `<p class="storage-notice">${esc(storageWarning)}</p>` : ""}${notice ? `<div class="game-toast" role="status">${esc(notice)}</div>` : ""}`;
   wireWorld($);
-  stopFrames=wireFrameCharacters($,liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches);
   stopCamp=wireCamp($,id=>{selectedHero=id;tab="collection";collectionMode="heroes";heroDetailOpen=true;render();},liteMode);
   wireHeroSwipe($,direction=>$.querySelector(`[data-hero-step="${direction}"]`)?.click());
   $.querySelectorAll("[data-expedition-route]").forEach(b=>b.onclick=()=>run(async()=>{await dispatch({type:"expeditionRoute",route:b.dataset.expeditionRoute});notice="本场路线已确定";}));
@@ -826,7 +824,8 @@ function openHero(id) {
   );
   m.dialog.classList.add("v-growth-page");
   m.dialog.classList.add('core-growth-page');
-  for(const button of m.dialog.querySelectorAll('[data-growth-tab]'))button.onclick=()=>{for(const t of m.dialog.querySelectorAll('[data-growth-tab]'))t.setAttribute('aria-selected',String(t===button));for(const pane of m.dialog.querySelectorAll('[data-growth-pane]'))pane.hidden=pane.dataset.growthPane!==button.dataset.growthTab;};
+  for(const button of m.dialog.querySelectorAll('[data-growth-tab]'))button.onclick=()=>{growthPanel=button.dataset.growthTab;for(const t of m.dialog.querySelectorAll('[data-growth-tab]'))t.setAttribute('aria-selected',String(t===button));for(const pane of m.dialog.querySelectorAll('[data-growth-pane]'))pane.hidden=pane.dataset.growthPane!==button.dataset.growthTab;};
+  m.dialog.querySelector(`[data-growth-tab="${growthPanel}"]`)?.click();
   for(const button of m.dialog.querySelectorAll('[data-growth-level]'))button.onclick=()=>run(async()=>{await dispatch({type:'levelBatch',id,count:Number(button.dataset.growthLevel)});m.end();openHero(id);notice='等级与资源已保存';});
   for(const button of m.dialog.querySelectorAll('[data-growth-source]'))button.onclick=()=>{m.end();tab='adventure';adventureMode='daily';render();};
   m.dialog.querySelector('[data-growth-summon]').onclick=()=>{m.end();tab='summon';render();};
@@ -1218,14 +1217,12 @@ function modal(content, label) {
   dialog.innerHTML = content;
   wirePortraitLoading(dialog);
   document.body.append(dialog);
-  const stopModalFrames=wireFrameCharacters(dialog,liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches);
   const timers = [];
   let closed = false;
   const end = () => {
     if (closed) return;
     closed = true;
     timers.forEach(clearTimeout);
-    stopModalFrames();
     dialog.close();
     dialog.remove();
   };
@@ -1325,7 +1322,7 @@ function showBattle(outcome) {
   };
   for(const u of units){const node=m.dialog.querySelector(`[data-unit="${u.unitId}"]`);node.querySelector('.hp-fill').style.width=(u.initialHp/u.maxHp*100)+'%';node.querySelector('.unit-hp').textContent=u.initialHp;node.classList.toggle('fallen',u.initialHp===0);}
   const skillShown = new Set();
-  function animate(event) {
+  function animate(event, audible=true) {
     const actor = m.dialog.querySelector(`[data-unit="${event.actor}"]`),
       target = m.dialog.querySelector(`[data-unit="${event.target}"]`);
     if (!actor || !target) return;
@@ -1351,31 +1348,8 @@ function showBattle(outcome) {
       void target.offsetWidth;
       target.classList.add("hit-flash");
     }
-    actor.style.setProperty('--lunge', event.side === 'p' ? '12px' : '-12px');
-    if(event.damage>0 && actor!==target && !reduced) {
-      const a=actor.getBoundingClientRect(),t=target.getBoundingClientRect();
-      const effect=document.createElement('span');effect.className='battle-impact';
-      effect.style.left=(t.left+t.width/2-m.dialog.getBoundingClientRect().left)+'px';
-      effect.style.top=(t.top+t.height/2-m.dialog.getBoundingClientRect().top)+'px';
-      effect.dataset.kind=event.critical?'critical':event.advantage?'advantage':'hit';
-      m.dialog.append(effect);m.after(()=>effect.remove(),350/speed);
-    }
-    actor.dataset.action=event.heal?"heal":event.shield?"guard":caster?.role==="法师"?"cast":caster?.role==="游侠"?"shoot":"strike";
-    actor.classList.remove("attacking");
-    void actor.offsetWidth;
-    actor.classList.add("attacking");
-    if(!reduced&&actor!==target&&(event.damage>0||event.heal||event.shield)){
-      const box=m.dialog.getBoundingClientRect(),a=actor.getBoundingClientRect(),t=target.getBoundingClientRect();
-      const fx=document.createElement('i');fx.className='role-projectile';fx.dataset.role=event.heal?'治疗':event.shield?'骑士':caster?.role||'战士';
-      fx.style.left=(a.left+a.width/2-box.left)+'px';fx.style.top=(a.top+a.height*.5-box.top)+'px';m.dialog.append(fx);
-      fx.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${t.left+t.width/2-a.left-a.width/2}px,${t.top+t.height*.5-a.top-a.height*.5}px)`,opacity:.4}],{duration:Math.max(100,300/speed),fill:'forwards'});
-      m.after(()=>fx.remove(),350/speed);
-    }
-    target.dataset.effect=event.heal?'heal':event.shield?'shield':event.damage>0?'hit':'';
-    m.after(()=>delete target.dataset.effect,500/speed);
-
-    if(!reduced){setFrameMotion(actor,event.heal?"heal":caster?.role==="法师"?"cast":"attack",600/speed);if(event.damage>0)setFrameMotion(target,"hit",300/speed);}
-    m.after(()=>actor.classList.remove('attacking'),450/speed);
+    target.dataset.effect=event.heal?'heal':event.shield||event.absorbed?'shield':event.damage>0?'hit':'';
+    m.after(()=>delete target.dataset.effect,350/speed);
     if(event.status==='warning'){actor.dataset.warning='true';if(!actor.querySelector('.unit-intent'))actor.insertAdjacentHTML('beforeend','<span class="unit-intent">下一回合释放技能</span>');}
     else if(event.round%3===0){actor.dataset.warning='false';actor.querySelector('.unit-intent')?.remove();}
 
@@ -1393,7 +1367,9 @@ function showBattle(outcome) {
         ? "护盾 +" + event.shield
         : event.heal !== undefined
           ? "+" + event.heal
-          : event.damage !== undefined
+          : event.damage===0&&event.absorbed>0
+            ? "抵挡 " + event.absorbed
+            : event.damage !== undefined
             ? (event.critical ? "暴击 " : "") +
               (event.advantage ? "克制 " : "") +
               "−" +
@@ -1418,7 +1394,20 @@ function showBattle(outcome) {
       number.textContent;
     m.dialog.querySelector(".round-counter").textContent =
       "第 " + event.round + " 回合 · " + event.skill;
-    tone(event.heal ? 660 : event.critical ? 320 : 220, 0.08);
+    if(audible)tone(event.heal ? 660 : event.critical ? 320 : 220, 0.08);
+  }
+  function prepare(group){
+    const event=group.events[0],actor=m.dialog.querySelector(`[data-unit="${event.actor}"]`),caster=units.find(u=>u.unitId===event.actor);
+    if(!actor||event.status||reduced)return;
+    actor.dataset.action=event.heal?'heal':event.shield?'guard':caster?.role==='法师'?'cast':caster?.role==='游侠'?'shoot':'strike';
+    actor.style.setProperty('--lunge',event.side==='p'?'7px':'-7px');actor.classList.remove('attacking');void actor.offsetWidth;actor.classList.add('attacking');m.after(()=>actor.classList.remove('attacking'),300/speed);
+    for(const result of group.events){
+      const target=m.dialog.querySelector(`[data-unit="${result.target}"]`);
+      if(!target||actor===target||!(result.damage!==undefined||result.heal||result.shield))continue;
+      const box=m.dialog.getBoundingClientRect(),a=actor.getBoundingClientRect(),t=target.getBoundingClientRect(),fx=document.createElement('i');
+      fx.className='role-projectile';fx.dataset.role=result.heal?'治疗':result.shield?'骑士':caster?.role||'战士';fx.style.left=(a.left+a.width/2-box.left)+'px';fx.style.top=(a.top+a.height*.5-box.top)+'px';m.dialog.append(fx);
+      fx.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${t.left+t.width/2-a.left-a.width/2}px,${t.top+t.height*.5-a.top-a.height*.5}px)`,opacity:.3}],{duration:Math.max(40,160/speed),fill:'forwards'});m.after(()=>fx.remove(),Math.max(40,160/speed));
+    }
   }
   let index = 0,
     finished = false;
@@ -1428,6 +1417,8 @@ function showBattle(outcome) {
     m.dialog.querySelector(".battle-cinema").classList.add("finished");
     if (finished) return;
     finished = true;
+    for(const fx of m.dialog.querySelectorAll('.role-projectile,.battle-impact'))fx.remove();
+    for(const unit of m.dialog.querySelectorAll('.combat-unit')){unit.classList.remove('attacking','hit-flash');delete unit.dataset.effect;}
     index = groups.length;
     for (const u of units) {
       const node = m.dialog.querySelector(`[data-unit="${u.unitId}"]`);
@@ -1454,8 +1445,9 @@ function showBattle(outcome) {
       finish();
       return;
     }
-    for(const event of groups[index++].events)animate(event);
-    m.after(advance, step / speed);
+    const group=groups[index++],delay=reduced?0:Math.max(40,160/speed);
+    prepare(group);
+    m.after(()=>{if(finished)return;group.events.forEach((event,i)=>animate(event,i===0));m.after(advance,Math.max(40,step/speed-delay));},delay);
   }
   m.dialog.querySelectorAll("[data-speed]").forEach(
     (b) =>

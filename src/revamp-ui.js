@@ -368,7 +368,7 @@ export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
                   const equipped = s.items.find((x) => x.id === current[slot]);
                   const preview=structuredClone(s);(preview.loadouts[id]??={})[slot]=i.id;
                   const delta=power(preview,id)-power(s,id);
-                  return `<button class="equipment-choice q${i.quality}" data-loadout-item="${i.id}" data-slot="${slot}" ${owner && Number(owner[0]) !== id ? "disabled" : ""}>${itemIcon(i)}<span><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${itemStatText(i)}<br><strong class="equip-delta ${delta>=0?'positive':'negative'}">替换后战力 ${delta >= 0 ? "+" : ""}${delta}</strong> · ${sets[i.set]}套<br>${Object.entries(itemStats(i)).filter(([,n])=>n>0).map(([k,n])=>{const diff=(n-(equipped?itemStats(equipped)[k]:0))*100;return `${{attack:'攻击',hp:'生命',crit:'暴击',heal:'治疗'}[k]} ${diff>=0?'+':''}${diff.toFixed(1)}%`;}).join(' · ')}</small><small>${owner ? `${heroes[+owner[0]].name}穿戴中` : "可穿戴"}</small></span>${current[slot] === i.id ? "✓" : ""}</button><button class="v-direct-forge secondary" data-direct-forge="${i.id}" ${i.level>=10?'disabled':''}>强化 +${i.level} → +${Math.min(10,i.level+1)} · ${(i.level+1)*100}金币 + ${i.level+1}强化石</button>`;
+                  return `<button class="equipment-choice q${i.quality}" data-loadout-item="${i.id}" data-slot="${slot}" ${owner && Number(owner[0]) !== id ? "disabled" : ""}>${itemIcon(i)}<span><b>${i.name} +${i.level}</b><small>${qualities[i.quality]} · ${itemStatText(i)}<br><strong class="equip-delta ${delta>=0?'positive':'negative'}">替换后战力 ${delta >= 0 ? "+" : ""}${delta}</strong> · ${sets[i.set]}套<br>${Object.entries(itemStats(i)).filter(([,n])=>n>0).map(([k,n])=>{const diff=(n-(equipped?itemStats(equipped)[k]:0))*100;return `${{attack:'攻击',hp:'生命',crit:'暴击',heal:'治疗'}[k]} ${diff>=0?'+':''}${diff.toFixed(1)}%`;}).join(' · ')}</small><small>${owner ? `${heroes[+owner[0]].name}穿戴中` : "可穿戴"}</small></span>${current[slot] === i.id ? "✓" : ""}</button><button class="v-direct-forge secondary" data-direct-forge="${i.id}" ${i.level>=10||s.coins<(i.level+1)*100||s.stones<i.level+1?'disabled':''}>强化 +${i.level} → +${Math.min(10,i.level+1)} · ${(i.level+1)*100}金币 + ${i.level+1}强化石</button>`;
                 })
                 .join("") || `<div class="equipment-empty">${gameIcon('robe')}<p>这个部位还没有装备</p><button class="primary" data-equipment-source="daily">去副本获取</button><button class="secondary" data-equipment-source="shop">选购旅行装备</button></div>`
             }</section>`,
@@ -379,11 +379,13 @@ export function openEquipmentRevamp(id, ctx, selectedSlot = "weapon") {
       "六部位装备配置",
     );
   m.dialog.classList.add("equipment-dialog", "revamped-equipment");
+  for(const slot of m.dialog.querySelectorAll('[data-equip-slot]'))slot.setAttribute('aria-pressed',String(slot.dataset.equipSlot===selectedSlot));
   for(const button of m.dialog.querySelectorAll('[data-equipment-source]'))button.onclick=()=>{m.end();ctx.navigateEquipment(button.dataset.equipmentSource);};
   m.dialog.querySelectorAll("[data-equip-slot]").forEach(
     (b) =>
       (b.onclick = () => {
         selectedSlot = b.dataset.equipSlot;
+        for(const slot of m.dialog.querySelectorAll('[data-equip-slot]'))slot.setAttribute('aria-pressed',String(slot===b));
         m.dialog
           .querySelectorAll("[data-slot-section]")
           .forEach((p) => (p.hidden = p.dataset.slotSection !== selectedSlot));
