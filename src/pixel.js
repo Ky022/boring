@@ -1,3 +1,4 @@
+import {cuteCharacter} from './cute-art.js';
 const palettes = [
   ["#efe1ff", "#9f78c4", "#64518b", "#fff0c4"],
   ["#ed8a4a", "#be382f", "#672c39", "#efc574"],
@@ -13,15 +14,7 @@ const palettes = [
   ["#728ca6", "#667a91", "#3c465f", "#d6ba89"],
 ];
 export function pixelCharacter(hero, classes = "") {
-
-  const url = new URL('art/pixel-heroes.webp', document.baseURI).href;
-  // Art-directed row bounds keep every full weapon inside its own viewport.
-  const rows = [0, 258, 493, 718, 916, 1121], row = Math.floor(hero.id / 8);
-  const cols = [0, 172, 345, 518, 700, 876, 1055, 1235, 1403], col = hero.id % 8;
-  const bounds = `x="${cols[col]+14}" y="${rows[row]}" width="${hero.id === 0 ? 130 : cols[col+1]-cols[col]-28}" height="${rows[row+1]-rows[row]}"`;
-  const staticArt = `<span class="pixel-character ${classes}" role="img" aria-label="${hero.name} · ${hero.title}" style="--sprite-x:${col / 7 * 100}%;--sprite-y:${row / 4 * 100}%"><svg viewBox="${cols[col]} ${rows[row]} ${cols[col + 1] - cols[col]} ${rows[row + 1] - rows[row]}" aria-hidden="true" overflow="hidden"><defs><clipPath id="pixel-clip-${hero.id}"><rect ${bounds}/></clipPath></defs><image href="${url}" width="1403" height="1121" clip-path="url(#pixel-clip-${hero.id})"/></svg></span>`;
-  return staticArt;
-
+  return cuteCharacter(hero,classes);
 }
 export function sprite(hero, { background = false, enemy = false } = {}) {
   if (!enemy) return pixelCharacter(hero, `hero-art pixel-sprite ${background ? "framed" : ""}`);

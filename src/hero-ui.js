@@ -1,3 +1,4 @@
+import {cuteIcon} from './cute-art.js';
 import {skillArt} from './art-direction.js';
 import { heroes, level, power, upgradeCost, rarities, combatTeam } from './game.js';
 import { heroIdentity } from './journey.js';
@@ -26,6 +27,7 @@ const paths = {
   mail: 'M4 11H44V38H4Z M4 11L24 28L44 11 M4 38L17 25 M44 38L31 25',
 };
 export function gameIcon(kind, extra = '') {
+  const painted=cuteIcon(kind,extra);if(painted)return painted;
   const id = `ui-gold-${kind}`;
   return `<svg class="game-icon ${extra}" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="${id}" x2=".25" y2="1"><stop stop-color="#fff5d0"/><stop offset=".45" stop-color="#d8b875"/><stop offset=".5" stop-color="#fff2b3"/><stop offset="1" stop-color="#977346"/></linearGradient></defs><path d="${paths[kind] || paths.star}" fill="url(#${id})" stroke="#554434" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
 }

@@ -158,3 +158,9 @@ The central camp now uses original pixel environment artwork with functional bui
 ### V8 refinement
 
 Existing features are polished without new systems: stable original pixel sprites replace prototype action-sheet switching, attacks land before health/damage feedback, grouped skills play one sound, and skipping prevents pending hits from changing the final result. Cultivation retains its tab; equipment highlights its selected slot and guards enhancement costs. Phone layouts and touch surfaces are simplified. Saves, combat balance and reward rules are retained.
+
+### V9 cute pixel presentation
+
+The approved camp concept is implemented as a playable scene with separate building controls, companions and an adventure button. Original camp scenery, a twelve-icon atlas and a forty-cell chibi atlas replace the central environment and small hero sprites. Camp, summon, hero collection, cultivation, workshop, formation, campaign, combat, rewards and social screens share warm wood/paper controls with turquoise primary actions. Existing full-size hero portraits are retained. Assets are included in both the Worker build and standalone GitHub Pages build.
+
+Validation: 88 domain tests; mobile interaction checks at 320×568 and 390×844 including ten-ticket summons, three formation drag operations, equipment, rewards and combat; impact timing, mid-flight skip and retained cultivation selection checks. Existing saves, database schema, rewards and combat balance are unchanged.

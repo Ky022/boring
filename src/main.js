@@ -1,3 +1,4 @@
+import './cute-ui.css';
 import './refinement.css';
 import './polish.css';
 import {skillArt,actionGroups} from './art-direction.js';
@@ -200,7 +201,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V8</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${cloud.user?'云端存档':'游客存档'} · V9</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
