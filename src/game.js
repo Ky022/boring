@@ -1,3 +1,4 @@
+import {recommendSquad} from './player-experience.js';
 import {endgameFresh,endgameAction,validEndgame} from './endgame.js';
 import { weeklyAction } from './weekly-trial.js';
 import { ensureOdyssey, odysseyAction, recordSpent } from "./odyssey.js";
@@ -510,6 +511,12 @@ export function applyAction(state, action, rng = Math.random, support = null) {
     if(state.coins<cost)throw Error('金币不足');
     recordSpent(state,id,'coins',cost);state.coins-=cost;state.levels[id]=before+steps;dailyState(state).upgrades+=steps;
     return {id,before,level:before+steps,cost};
+  }
+  if(action.type==='smartFormation'){
+    const pool=heroes.filter(h=>state.collection[h.id]).map(h=>({...h,power:power(state,h.id),ability:heroGrowth(state,h)}));
+    const ids=recommendSquad(pool,stageEnemies(state.stage));if(!ids.length)throw Error('尚未拥有英雄');
+    const positions=Array(6).fill(null);for(const id of ids){const front=['骑士','战士'].includes(heroes[id].role);const slots=front?[0,1,2,3,4,5]:[3,4,5,0,1,2];positions[slots.find(i=>positions[i]===null)]=id;}
+    state.formation=positions;state.team=positions.filter(id=>id!==null);return {team:state.team,positions};
   }
   const late=endgameAction(state,action,rng,{heroes,combatTeam,simulateCombat,dailyState});
   if(late.handled)return late.result;

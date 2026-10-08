@@ -1,3 +1,5 @@
+import './experience.css';
+import {battleReview} from './player-experience.js';
 import './endgame.css';
 import {difficultyView,randomRelicView,collectionChallengeView} from './endgame-ui.js';
 import {endgameState,skins} from './endgame.js';
@@ -205,7 +207,7 @@ function render() {
         ])
       : [];
   $.dataset.screen = tab;
-  $.innerHTML = `<header class="game-hud"><button class="player-avatar" style="border-color:${skins[endgameState(state).skin]?.color||'#e7d2a1'}" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${esc(endgameState(state).title)||(cloud.user?'云端存档':'游客存档')} · V11</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
+  $.innerHTML = `<header class="game-hud"><button class="player-avatar" style="border-color:${skins[endgameState(state).skin]?.color||'#e7d2a1'}" data-tab="account" aria-label="玩家账号">${sprite(heroes[state.team[0]??8])}</button><button class="r-traveler" data-tab="account"><b>${esc(cloud.user?.username||'星灯旅人')}</b><small>${esc(endgameState(state).title)||(cloud.user?'云端存档':'游客存档')} · V12</small></button><div class="hud-resources"><div class="wallet">${gameIcon("summon")}<b>${state.gems.toLocaleString()}</b></div><div class="coin-wallet"><span>●</span><b>${state.coins.toLocaleString()}</b></div></div><button class="sound-toggle" id="sound-toggle" aria-label="切换音效">${soundOn?'♫':'♪'}</button>${document.documentElement.requestFullscreen?'<button class="fullscreen-button" data-fullscreen aria-label="切换全屏">⛶</button>':''}</header><main class="game-stage"><section id="content">${tab === "home" ? homeView() : tab === "summon" ? summonView() : tab === "collection" ? collectionView() : tab === "adventure" ? adventureView() : tab === "social" ? socialView() : tab === "arena" ? arenaView() : accountView()}</section></main><nav class="game-dock">${[
     ["home", "⌂", "营地"],
     ["summon", "✧", "召唤"],
     ["collection", "⚔", "英雄"],
@@ -1304,7 +1306,7 @@ function combatStatsView(outcome) {
   };
   const allies=rows.filter(r=>r.side==='p');
   const highlights=[['damage','输出核心'],['healing','治疗贡献'],['shielding','护盾贡献']].map(([key,label])=>{const best=[...allies].sort((a,b)=>b[key]-a[key])[0];return best?.[key]>0?`<span>${label} · ${esc(best.name)} ${best[key].toLocaleString()}</span>`:'';}).join('');
-  return `<section class="combat-stats"><h3>本队战斗统计</h3><div class="combat-highlights">${highlights}</div>${side("p")}<details><summary>敌方战斗统计</summary>${side("e")}</details>${outcome.tips?.length ? `<div class="battle-advice"><h3>阵容建议</h3><ul>${outcome.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}</section>`;
+  return `<section class="battle-review"><h3>这场战斗说明了什么</h3>${battleReview(outcome).map(t=>`<p>${esc(t)}</p>`).join('')}<button class="secondary" data-result-formation>调整阵容</button><button class="secondary" data-result-growth>培养核心</button></section><section class="combat-stats"><h3>本队战斗统计</h3><div class="combat-highlights">${highlights}</div>${side("p")}<details><summary>敌方战斗统计</summary>${side("e")}</details>${outcome.tips?.length ? `<div class="battle-advice"><h3>阵容建议</h3><ul>${outcome.tips.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : ""}</section>`;
 }
 function showBattle(outcome) {
   const reduced = liteMode || matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1336,6 +1338,8 @@ function showBattle(outcome) {
     "自动战斗与统计",
   );
   m.dialog.classList.add("battle-fullscreen");
+  m.dialog.querySelector('[data-result-formation]').onclick=()=>{m.end();tab='collection';collectionMode='formation';heroDetailOpen=false;render();};
+  m.dialog.querySelector('[data-result-growth]').onclick=()=>{m.end();const best=[...(outcome.stats||[])].filter(u=>u.side==='p').sort((a,b)=>b.damage-a.damage)[0];selectedHero=outcome.players.find(u=>u.unitId===best?.unitId)?.id??state.team[0];if(selectedHero===undefined)return;tab='collection';collectionMode='heroes';heroDetailOpen=true;render();openHero(selectedHero);};
   m.dialog.querySelector("[data-battle-exit]").onclick = m.end;
   const labels = {
     warning: "首领蓄力",
